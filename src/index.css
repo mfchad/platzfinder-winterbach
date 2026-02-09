@@ -2,87 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Wimbledon-inspired palette */
+    --background: 80 20% 97%;
+    --foreground: 150 30% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 150 30% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 150 30% 12%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Deep Wimbledon green */
+    --primary: 145 63% 22%;
+    --primary-foreground: 60 30% 96%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Light sage */
+    --secondary: 120 15% 92%;
+    --secondary-foreground: 150 30% 12%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 80 10% 94%;
+    --muted-foreground: 150 10% 42%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Purple accent (Wimbledon) */
+    --accent: 270 50% 30%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 120 10% 85%;
+    --input: 120 10% 85%;
+    --ring: 145 63% 22%;
 
     --radius: 0.5rem;
 
+    /* Custom tokens */
+    --court-empty: 120 20% 95%;
+    --court-half: 45 80% 65%;
+    --court-full: 145 50% 40%;
+    --court-special: 270 40% 55%;
+    --court-past: 0 0% 93%;
+    --court-header: 145 63% 18%;
+
+    --wimbledon-green: 145 63% 22%;
+    --wimbledon-dark: 150 50% 10%;
+    --wimbledon-purple: 270 50% 30%;
+    --wimbledon-gold: 42 80% 55%;
+    --wimbledon-cream: 45 30% 96%;
+    --wimbledon-lawn: 120 35% 88%;
+
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
+    --background: 150 30% 6%;
+    --foreground: 60 30% 96%;
+    --card: 150 25% 10%;
+    --card-foreground: 60 30% 96%;
+    --popover: 150 25% 10%;
+    --popover-foreground: 60 30% 96%;
+    --primary: 145 55% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 20% 15%;
+    --secondary-foreground: 60 30% 96%;
+    --muted: 150 15% 18%;
+    --muted-foreground: 120 10% 60%;
+    --accent: 270 45% 45%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 15% 20%;
+    --input: 150 15% 20%;
+    --ring: 145 55% 35%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --court-empty: 150 15% 15%;
+    --court-half: 45 60% 40%;
+    --court-full: 145 40% 30%;
+    --court-special: 270 35% 35%;
+    --court-past: 150 10% 12%;
+    --court-header: 145 50% 15%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -98,8 +108,42 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .court-cell {
+    @apply border border-border rounded-sm transition-all duration-150 cursor-pointer;
+    min-height: 3.5rem;
+  }
+  .court-cell-empty {
+    background: hsl(var(--court-empty));
+  }
+  .court-cell-empty:hover {
+    background: hsl(var(--wimbledon-lawn));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.3);
+  }
+  .court-cell-half {
+    background: hsl(var(--court-half));
+  }
+  .court-cell-full {
+    background: hsl(var(--court-full));
+    color: white;
+  }
+  .court-cell-special {
+    background: hsl(var(--court-special));
+    color: white;
+    cursor: default;
+  }
+  .court-cell-past {
+    background: hsl(var(--court-past));
+    cursor: default;
+    opacity: 0.6;
   }
 }

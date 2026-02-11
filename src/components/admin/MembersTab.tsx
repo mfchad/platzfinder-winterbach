@@ -234,7 +234,10 @@ export default function MembersTab() {
     <Card>
       <CardHeader>
         <CardTitle className="font-display flex items-center justify-between flex-wrap gap-2">
-          <span>Mitgliederverwaltung ({members.length})</span>
+          <span className="flex items-center gap-2">
+            Mitgliederverwaltung
+            <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{members.length}</span>
+          </span>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Label htmlFor="edit-mode-toggle" className="text-sm font-normal cursor-pointer">
@@ -308,8 +311,8 @@ export default function MembersTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 z-10 bg-background min-w-[120px]">Vorname</TableHead>
-                <TableHead className="sticky left-[120px] z-10 bg-background min-w-[120px]">Nachname</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-background min-w-[120px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border/50">Vorname</TableHead>
+                <TableHead className="sticky left-[120px] z-10 bg-background min-w-[120px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:shadow-[2px_0_4px_rgba(0,0,0,0.05)]">Nachname</TableHead>
                 <TableHead className="min-w-[100px]">Geburtsjahr</TableHead>
                 <TableHead className="min-w-[200px]">E-Mail</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -324,26 +327,19 @@ export default function MembersTab() {
                     className={
                       isDirty
                         ? "border-l-2 border-l-blue-500"
-                        : isEditMode
-                        ? "bg-amber-50/50 dark:bg-amber-950/10"
                         : ""
                     }
                   >
                     {(["vorname", "nachname", "geburtsjahr", "email"] as const).map((field, colIdx) => {
                       const isSticky = field === "vorname" || field === "nachname";
                       const stickyClass = field === "vorname"
-                        ? "sticky left-0 z-10"
+                        ? "sticky left-0 z-10 bg-background after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border/50"
                         : field === "nachname"
-                        ? "sticky left-[120px] z-10"
+                        ? "sticky left-[120px] z-10 bg-background after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                         : "";
-                      const bgClass = isDirty
-                        ? "bg-blue-50 dark:bg-blue-950/20"
-                        : isEditMode
-                        ? "bg-amber-50/50 dark:bg-amber-950/10"
-                        : "bg-background";
 
                       return (
-                        <TableCell key={field} className={`${stickyClass} ${isSticky ? bgClass : ""}`}>
+                        <TableCell key={field} className={`${stickyClass}`}>
                           {isEditMode ? (
                             <Input
                               ref={(el) => { inputRefs.current[`${m.id}-${field}`] = el; }}
@@ -351,7 +347,7 @@ export default function MembersTab() {
                               value={getCellValue(m, field)}
                               onChange={e => handleCellChange(m.id, field, e.target.value, m)}
                               onKeyDown={e => handleKeyDown(e, m.id, field, rowIndex)}
-                              className="h-8 text-sm border-transparent focus:border-input bg-transparent"
+                              className="h-8 text-sm border-transparent hover:border-muted-foreground/30 focus:border-ring focus:ring-1 focus:ring-ring bg-transparent transition-colors"
                             />
                           ) : (
                             <span>{field === "email" ? (m[field] || "-") : m[field]}</span>

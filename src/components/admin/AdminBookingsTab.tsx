@@ -18,6 +18,7 @@ type ViewMode = "grid" | "list";
 type TimeScale = "day" | "week" | "month" | "year";
 
 export default function AdminBookingsTab() {
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [timeScale, setTimeScale] = useState<TimeScale>("day");
   const [date, setDate] = useState(new Date());
@@ -105,7 +106,7 @@ export default function AdminBookingsTab() {
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigate(1)}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8">
                   <Calendar className="h-4 w-4" />
@@ -115,8 +116,9 @@ export default function AdminBookingsTab() {
                 <CalendarPicker
                   mode="single"
                   selected={date}
-                  onSelect={d => d && setDate(d)}
+                  onSelect={d => { if (d) { setDate(d); setCalendarOpen(false); } }}
                   locale={de}
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>

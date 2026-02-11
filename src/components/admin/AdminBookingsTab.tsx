@@ -55,6 +55,11 @@ export default function AdminBookingsTab() {
     loadBookings();
   };
 
+  const handleDrillDown = useCallback((targetDate: Date, scale: "day" | "week" | "month") => {
+    setDate(targetDate);
+    setTimeScale(scale);
+  }, []);
+
   const navigate = (dir: -1 | 1) => {
     switch (timeScale) {
       case "day": setDate(d => addDays(d, dir)); break;
@@ -140,6 +145,7 @@ export default function AdminBookingsTab() {
             endHour={endHour}
             courtsCount={courtsCount}
             onDelete={deleteBooking}
+            onDrillDown={handleDrillDown}
           />
         ) : (
           <AdminBookingsList

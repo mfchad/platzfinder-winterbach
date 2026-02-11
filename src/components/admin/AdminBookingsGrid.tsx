@@ -15,14 +15,15 @@ interface AdminBookingsGridProps {
   endHour: number;
   courtsCount: number;
   onDelete: (id: string) => void;
+  onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void;
 }
 
 export default function AdminBookingsGrid({
-  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete,
+  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onDrillDown,
 }: AdminBookingsGridProps) {
-  if (timeScale === "month") return <MonthGrid bookings={bookings} date={date} />;
-  if (timeScale === "year") return <YearGrid bookings={bookings} date={date} />;
-  if (timeScale === "week") return <WeekGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} />;
+  if (timeScale === "month") return <MonthGrid bookings={bookings} date={date} onDrillDown={onDrillDown} />;
+  if (timeScale === "year") return <YearGrid bookings={bookings} date={date} onDrillDown={onDrillDown} />;
+  if (timeScale === "week") return <WeekGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onDrillDown={onDrillDown} />;
   return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} />;
 }
 
@@ -70,8 +71,9 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }: 
 }
 
 // ===== Week Grid =====
-function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }: {
+function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, onDrillDown }: {
   bookings: Booking[]; date: Date; startHour: number; endHour: number; courtsCount: number; onDelete: (id: string) => void;
+  onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void;
 }) {
   const days = useMemo(() => eachDayOfInterval({
     start: startOfWeek(date, { weekStartsOn: 1 }),
@@ -97,7 +99,11 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }:
         <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: `60px repeat(7, 1fr)` }}>
           <div className="text-xs font-semibold text-muted-foreground p-1" />
           {days.map(d => (
-            <div key={d.toISOString()} className="text-center text-xs font-display font-semibold p-1 rounded-t-md bg-court-header text-primary-foreground">
+            <div
+              key={d.toISOString()}
+              className="text-center text-xs font-display font-semibold p-1 rounded-t-md bg-court-header text-primary-foreground cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => onDrillDown?.(d, "day")}
+            >
               {format(d, "EEE dd.MM", { locale: de })}
             </div>
           ))}
@@ -148,7 +154,7 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }:
 }
 
 // ===== Month Grid =====
-function MonthGrid({ bookings, date }: { bookings: Booking[]; date: Date }) {
+function MonthGrid({ bookings, date, onDrillDown }: { bookings: Booking[]; date: Date; onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void }) {
   const countByDate = useMemo(() => {
     const map: Record<string, number> = {};
     bookings.forEach(b => { map[b.date] = (map[b.date] || 0) + 1; });
@@ -186,9 +192,13 @@ function MonthGrid({ bookings, date }: { bookings: Booking[]; date: Date }) {
               const count = countByDate[ds] || 0;
               const isCurrentMonth = d.getMonth() === date.getMonth();
               return (
-                <div key={ds} className={`border border-border rounded-sm p-2 min-h-[3rem] ${
-                  !isCurrentMonth ? "opacity-30" : count > 0 ? "bg-court-half/30" : ""
-                }`}>
+                <div
+                  key={ds}
+                  className={`border border-border rounded-sm p-2 min-h-[3rem] cursor-pointer hover:ring-1 hover:ring-primary transition-all ${
+                    !isCurrentMonth ? "opacity-30" : count > 0 ? "bg-court-half/30" : ""
+                  }`}
+                  onClick={() => isCurrentMonth && onDrillDown?.(d, "week")}
+                >
                   <div className="text-xs font-medium">{d.getDate()}</div>
                   {count > 0 && (
                     <div className="text-xs text-muted-foreground mt-1">{count} Buchung{count !== 1 ? "en" : ""}</div>
@@ -204,7 +214,7 @@ function MonthGrid({ bookings, date }: { bookings: Booking[]; date: Date }) {
 }
 
 // ===== Year Grid =====
-function YearGrid({ bookings, date }: { bookings: Booking[]; date: Date }) {
+function YearGrid({ bookings, date, onDrillDown }: { bookings: Booking[]; date: Date; onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void }) {
   const countByMonth = useMemo(() => {
     const map: Record<number, number> = {};
     bookings.forEach(b => {
@@ -223,9 +233,11 @@ function YearGrid({ bookings, date }: { bookings: Booking[]; date: Date }) {
         const count = countByMonth[m] || 0;
         const isCurrent = m === date.getMonth();
         return (
-          <div key={m} className={`border border-border rounded-md p-4 text-center ${
+          <div key={m} className={`border border-border rounded-md p-4 text-center cursor-pointer hover:ring-1 hover:ring-primary transition-all ${
             isCurrent ? "ring-2 ring-primary" : ""
-          } ${count > 0 ? "bg-court-half/20" : ""}`}>
+          } ${count > 0 ? "bg-court-half/20" : ""}`}
+            onClick={() => onDrillDown?.(new Date(date.getFullYear(), m, 1), "month")}
+          >
             <div className="font-display font-semibold text-sm">{monthNames[m]}</div>
             <div className="text-2xl font-bold text-foreground mt-1">{count}</div>
             <div className="text-xs text-muted-foreground">Buchungen</div>

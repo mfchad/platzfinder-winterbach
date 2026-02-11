@@ -26,8 +26,8 @@ export default function DateNavigation({ date, onDateChange }: DateNavigationPro
   const goToday = () => onDateChange(new Date());
 
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-3">
-      <div className="min-w-[180px] sm:min-w-[240px] text-center">
+    <div className="flex items-center gap-3">
+      <div className="w-[200px] sm:w-[240px]">
         <span className="font-display text-lg sm:text-xl font-semibold text-foreground">
           {formatGermanDate(date)}
         </span>

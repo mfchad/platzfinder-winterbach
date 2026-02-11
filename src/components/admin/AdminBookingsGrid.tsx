@@ -3,6 +3,9 @@ import { User, Users, UserPlus, UserCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Booking } from "@/lib/types";
@@ -16,21 +19,23 @@ interface AdminBookingsGridProps {
   endHour: number;
   courtsCount: number;
   onDelete: (id: string) => void;
+  onUpdate?: (id: string, updates: Partial<Booking>) => void;
   onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void;
 }
 
 export default function AdminBookingsGrid({
-  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onDrillDown,
+  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onUpdate, onDrillDown,
 }: AdminBookingsGridProps) {
   if (timeScale === "month") return <MonthGrid bookings={bookings} date={date} onDrillDown={(d) => onDrillDown?.(d, "day")} />;
   if (timeScale === "year") return <YearGrid bookings={bookings} date={date} onDrillDown={onDrillDown} />;
   if (timeScale === "week") return <WeekGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onDrillDown={(d) => onDrillDown?.(d, "day")} />;
-  return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} />;
+  return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onUpdate={onUpdate} />;
 }
 
 // ===== Day Grid =====
-function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }: {
+function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, onUpdate }: {
   bookings: Booking[]; date: Date; startHour: number; endHour: number; courtsCount: number; onDelete: (id: string) => void;
+  onUpdate?: (id: string, updates: Partial<Booking>) => void;
 }) {
   const hours = useMemo(() => Array.from({ length: endHour - startHour }, (_, i) => i + startHour), [startHour, endHour]);
   const courts = useMemo(() => Array.from({ length: courtsCount }, (_, i) => i + 1), [courtsCount]);
@@ -41,6 +46,34 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }: 
     bookings.filter(b => b.date === dateStr).forEach(b => { map[`${b.court_number}-${b.start_hour}`] = b; });
     return map;
   }, [bookings, dateStr]);
+
+  const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
+  const [editTarget, setEditTarget] = useState<Booking | null>(null);
+  const [editVorname, setEditVorname] = useState("");
+  const [editNachname, setEditNachname] = useState("");
+  const [editType, setEditType] = useState("");
+  const [showEditDeleteConfirm, setShowEditDeleteConfirm] = useState(false);
+
+  const openEdit = (booking: Booking) => {
+    setEditTarget(booking);
+    setEditVorname(booking.booker_vorname);
+    setEditNachname(booking.booker_nachname);
+    setEditType(booking.booking_type);
+    setShowEditDeleteConfirm(false);
+  };
+
+  const saveEdit = () => {
+    if (editTarget && onUpdate) {
+      onUpdate(editTarget.id, {
+        booker_vorname: editVorname,
+        booker_nachname: editNachname,
+        booking_type: editType as Booking['booking_type'],
+      });
+    }
+    setEditTarget(null);
+  };
+
+  const isRecurring = (b: Booking | null) => !!(b?.recurrence_parent_id || b?.recurrence_type);
 
   return (
     <div className="overflow-x-auto">
@@ -61,12 +94,110 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete }: 
             {courts.map(court => {
               const booking = bookingMap[`${court}-${hour}`];
               return (
-                <AdminSlotCell key={court} booking={booking} onDelete={onDelete} />
+                <AdminSlotCell
+                  key={court}
+                  booking={booking}
+                  onDeleteClick={(b) => setDeleteTarget(b)}
+                  onCellClick={(b) => openEdit(b)}
+                />
               );
             })}
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget && !editTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buchung löschen</DialogTitle>
+            <DialogDescription>Möchten Sie diese Buchung wirklich löschen?</DialogDescription>
+          </DialogHeader>
+          {isRecurring(deleteTarget) && (
+            <p className="text-sm font-bold text-foreground">
+              Hinweis: Dieser Termin gehört zu einer Serie. Änderungen hier betreffen nur diesen Termin. Um die gesamte Serie zu ändern, nutzen Sie bitte die Seite Sonderbuchungen.
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Abbrechen</Button>
+            <Button variant="destructive" onClick={() => { onDelete(deleteTarget!.id); setDeleteTarget(null); }}>Bestätigen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) { setEditTarget(null); setShowEditDeleteConfirm(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buchung bearbeiten</DialogTitle>
+            <DialogDescription>
+              Platz {editTarget?.court_number} — {String(editTarget?.start_hour ?? 0).padStart(2, "0")}:00 Uhr
+            </DialogDescription>
+          </DialogHeader>
+          {isRecurring(editTarget) && (
+            <p className="text-sm font-bold text-foreground">
+              Hinweis: Dieser Termin gehört zu einer Serie. Änderungen hier betreffen nur diesen Termin. Um die gesamte Serie zu ändern, nutzen Sie bitte die Seite Sonderbuchungen.
+            </p>
+          )}
+
+          {!showEditDeleteConfirm ? (
+            <>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="edit-vorname">Vorname</Label>
+                    <Input id="edit-vorname" value={editVorname} onChange={e => setEditVorname(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-nachname">Nachname</Label>
+                    <Input id="edit-nachname" value={editNachname} onChange={e => setEditNachname(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-type">Buchungstyp</Label>
+                  <Select value={editType} onValueChange={setEditType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Einzel</SelectItem>
+                      <SelectItem value="half">Halbbuchung</SelectItem>
+                      <SelectItem value="double">Doppel</SelectItem>
+                      <SelectItem value="special">Sonderbuchung</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editTarget && (
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    {editTarget.partner_vorname && <p>Partner: {editTarget.partner_vorname} {editTarget.partner_nachname}</p>}
+                    {editTarget.double_match_names && <p>Mitspieler: {editTarget.double_match_names}</p>}
+                    {editTarget.booker_comment && <p>Kommentar: {editTarget.booker_comment}</p>}
+                    {editTarget.booker_email && <p>E-Mail: {editTarget.booker_email}</p>}
+                    <p>Erstellt: {new Date(editTarget.created_at).toLocaleString("de-DE")}</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="flex-row gap-2 sm:justify-between">
+                <Button variant="destructive" size="sm" onClick={() => setShowEditDeleteConfirm(true)}>
+                  <Trash2 className="h-3 w-3 mr-1" /> Löschen
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setEditTarget(null)}>Abbrechen</Button>
+                  <Button onClick={saveEdit}>Speichern</Button>
+                </div>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-foreground">Möchten Sie diese Buchung wirklich löschen?</p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowEditDeleteConfirm(false)}>Abbrechen</Button>
+                <Button variant="destructive" onClick={() => { onDelete(editTarget!.id); setEditTarget(null); setShowEditDeleteConfirm(false); }}>Bestätigen</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -281,7 +412,11 @@ function YearGrid({ bookings, date, onDrillDown }: { bookings: Booking[]; date: 
 }
 
 // ===== Shared components =====
-function AdminSlotCell({ booking, onDelete }: { booking?: Booking; onDelete: (id: string) => void }) {
+function AdminSlotCell({ booking, onDeleteClick, onCellClick }: {
+  booking?: Booking;
+  onDeleteClick: (b: Booking) => void;
+  onCellClick: (b: Booking) => void;
+}) {
   if (!booking) {
     return (
       <div className="court-cell court-cell-empty cursor-default">
@@ -303,7 +438,7 @@ function AdminSlotCell({ booking, onDelete }: { booking?: Booking; onDelete: (id
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className={`${cellClass} cursor-pointer`}>
+        <div className={`${cellClass} cursor-pointer`} onClick={() => onCellClick(booking)}>
           <div className="h-full flex items-center justify-center text-xs font-medium gap-1 px-1">
             {isSpecial ? (
               <span>{booking.special_label || "Belegt"}</span>
@@ -332,7 +467,7 @@ function AdminSlotCell({ booking, onDelete }: { booking?: Booking; onDelete: (id
             variant="destructive"
             size="sm"
             className="w-full mt-1 h-6 text-xs"
-            onClick={(e) => { e.stopPropagation(); onDelete(booking.id); }}
+            onClick={(e) => { e.stopPropagation(); onDeleteClick(booking); }}
           >
             <Trash2 className="h-3 w-3 mr-1" /> Löschen
           </Button>

@@ -741,22 +741,40 @@ function WeeklyForm({
   toggleInArray: (arr: number[], val: number) => number[];
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
-  const selectCountRef = React.useRef(0);
+  // Local range state to control reset behavior independently from parent
+  const [localRange, setLocalRange] = useState<{ from?: Date; to?: Date } | undefined>(
+    startDate ? { from: startDate, to: endDate } : undefined
+  );
+  const hadCompleteRange = React.useRef(false);
 
   const handleRangeOpen = (open: boolean) => {
     if (open) {
-      // Reset click counter when popover opens so first click never auto-closes
-      selectCountRef.current = 0;
+      // Sync local range from parent state when opening
+      setLocalRange(startDate ? { from: startDate, to: endDate } : undefined);
+      hadCompleteRange.current = !!(startDate && endDate);
     }
     setRangeOpen(open);
   };
 
   const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    selectCountRef.current += 1;
+    // If we had a complete range before and user clicks, start fresh
+    if (hadCompleteRange.current) {
+      // react-day-picker adjusted an endpoint; override to start a fresh selection
+      // The "from" in the new range is the newly clicked date
+      const clickedDate = range?.from;
+      setLocalRange(clickedDate ? { from: clickedDate, to: undefined } : undefined);
+      setStartDate(clickedDate);
+      setEndDate(undefined);
+      hadCompleteRange.current = false;
+      return;
+    }
+
+    setLocalRange(range);
     setStartDate(range?.from);
     setEndDate(range?.to);
-    // Only auto-close after at least 2 clicks (from + to) AND both are present
-    if (range?.from && range?.to && selectCountRef.current >= 2) {
+
+    if (range?.from && range?.to) {
+      hadCompleteRange.current = true;
       setTimeout(() => setRangeOpen(false), 150);
     }
   };
@@ -781,7 +799,7 @@ function WeeklyForm({
           <PopoverContent className="w-auto p-0" align="start">
             <CalendarPicker
               mode="range"
-              selected={startDate ? { from: startDate, to: endDate } : undefined}
+              selected={localRange?.from ? { from: localRange.from, to: localRange.to } : undefined}
               onSelect={handleRangeSelect as any}
               locale={de}
               numberOfMonths={2}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -741,12 +741,22 @@ function WeeklyForm({
   toggleInArray: (arr: number[], val: number) => number[];
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
+  const selectCountRef = React.useRef(0);
+
+  const handleRangeOpen = (open: boolean) => {
+    if (open) {
+      // Reset click counter when popover opens so first click never auto-closes
+      selectCountRef.current = 0;
+    }
+    setRangeOpen(open);
+  };
 
   const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    selectCountRef.current += 1;
     setStartDate(range?.from);
     setEndDate(range?.to);
-    // Auto-close when both dates are selected
-    if (range?.from && range?.to) {
+    // Only auto-close after at least 2 clicks (from + to) AND both are present
+    if (range?.from && range?.to && selectCountRef.current >= 2) {
       setTimeout(() => setRangeOpen(false), 150);
     }
   };
@@ -761,7 +771,7 @@ function WeeklyForm({
     <div className="space-y-4 max-w-lg">
       <div>
         <Label>Zeitraum</Label>
-        <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+        <Popover open={rangeOpen} onOpenChange={handleRangeOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-start text-left font-normal">
               <Calendar className="mr-2 h-4 w-4" />

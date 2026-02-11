@@ -1,0 +1,2 @@
+ALTER TABLE public.bookings DROP CONSTRAINT bookings_recurrence_type_check;
+ALTER TABLE public.bookings ADD CONSTRAINT bookings_recurrence_type_check CHECK (recurrence_type = ANY (ARRAY['none'::text, 'daily'::text, 'weekly'::text, 'monthly'::text, 'einmalig'::text]));

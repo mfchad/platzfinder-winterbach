@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { Booking } from "@/lib/types";
 
 interface AdminBookingsListProps {
@@ -99,29 +99,23 @@ export default function AdminBookingsList({ bookings, onDelete }: AdminBookingsL
           </div>
         </div>
       )}
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Buchung löschen</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchten Sie diese Buchung wirklich löschen?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buchung löschen</DialogTitle>
+            <DialogDescription>Möchten Sie diese Buchung wirklich löschen?</DialogDescription>
+          </DialogHeader>
           {(deleteTarget?.recurrence_parent_id || deleteTarget?.recurrence_type) && (
-            <div className="bg-accent border border-border rounded-md p-3 text-sm">
-              <strong>Hinweis: Dieser Termin gehört zu einer Serie.</strong>{" "}
-              Änderungen hier betreffen nur diesen Termin. Um die gesamte Serie zu ändern, nutzen Sie bitte die Seite <em>Sonderbuchungen</em>.
-            </div>
+            <p className="text-sm font-bold text-foreground">
+              Hinweis: Dieser Termin gehört zu einer Serie. Änderungen hier betreffen nur diesen Termin. Um die gesamte Serie zu ändern, nutzen Sie bitte die Seite Sonderbuchungen.
+            </p>
           )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { if (deleteTarget) { onDelete(deleteTarget.id); setDeleteTarget(null); } }}>
-              Löschen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Abbrechen</Button>
+            <Button variant="destructive" onClick={() => { if (deleteTarget) { onDelete(deleteTarget.id); setDeleteTarget(null); } }}>Löschen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

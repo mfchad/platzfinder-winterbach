@@ -386,25 +386,45 @@ function SpecialBookingsTab() {
 // ===== Rules Tab =====
 function RulesTab() {
   const [rules, setRules] = useState<BookingRule[]>([]);
+  const [editedValues, setEditedValues] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('booking_rules').select('*').order('rule_key');
     setRules((data as BookingRule[]) || []);
+    setEditedValues({});
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const updateRule = async (id: string, value: string) => {
-    const { error } = await supabase.from('booking_rules').update({ rule_value: value, updated_at: new Date().toISOString() }).eq('id', id);
-    if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Gespeichert" });
+  const hasChanges = Object.keys(editedValues).some(id => {
+    const rule = rules.find(r => r.id === id);
+    return rule && editedValues[id] !== rule.rule_value;
+  });
+
+  const handleSaveAll = async () => {
+    const changed = Object.entries(editedValues).filter(([id, val]) => {
+      const rule = rules.find(r => r.id === id);
+      return rule && val !== rule.rule_value;
+    });
+    for (const [id, value] of changed) {
+      const { error } = await supabase.from('booking_rules').update({ rule_value: value, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
+    }
+    toast({ title: "Gespeichert", description: `${changed.length} Regel(n) aktualisiert.` });
     load();
   };
 
   return (
     <Card>
-      <CardHeader><CardTitle className="font-display">Regelwerk verwalten</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="font-display flex items-center justify-between">
+          Regelwerk verwalten
+          <Button onClick={handleSaveAll} disabled={!hasChanges} size="sm">
+            Speichern
+          </Button>
+        </CardTitle>
+      </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {rules.map(r => (
@@ -414,11 +434,9 @@ function RulesTab() {
                 <p className="text-xs text-muted-foreground">{r.rule_key}</p>
               </div>
               <Input
-                defaultValue={r.rule_value}
+                value={editedValues[r.id] ?? r.rule_value}
+                onChange={e => setEditedValues(prev => ({ ...prev, [r.id]: e.target.value }))}
                 className="w-32"
-                onBlur={e => {
-                  if (e.target.value !== r.rule_value) updateRule(r.id, e.target.value);
-                }}
               />
             </div>
           ))}

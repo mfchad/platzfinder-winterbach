@@ -62,10 +62,9 @@ export default function Index() {
             Platzbuchung Tennisclub Winterbach e.V. 1973
           </h1>
           <Button
-            variant="outline"
             size="sm"
             onClick={() => navigate('/admin')}
-            className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+            className="bg-primary text-primary-foreground hover:bg-primary/80 border-none"
           >
             <Settings className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Verwaltung</span>

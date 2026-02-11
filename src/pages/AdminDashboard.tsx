@@ -7,19 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, LogOut, Trash2, Edit, Plus, Upload, Calendar } from "lucide-react";
-import { de } from "date-fns/locale";
-import { format } from "date-fns";
-import type { Member, Booking, BookingRule } from "@/lib/types";
-import DateNavigation from "@/components/DateNavigation";
-import { formatDateISO, anonymizeName } from "@/lib/types";
+import { ArrowLeft, LogOut, Trash2, Plus, Upload } from "lucide-react";
+import type { Member, BookingRule } from "@/lib/types";
 import AdminBookingsTab from "@/components/admin/AdminBookingsTab";
+import SpecialBookingsTab from "@/components/admin/SpecialBookingsTab";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -218,125 +212,7 @@ function MembersTab() {
 
 // BookingsTab moved to src/components/admin/AdminBookingsTab.tsx
 
-// ===== Special Bookings Tab =====
-function SpecialBookingsTab() {
-  const [court, setCourt] = useState("1");
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [hour, setHour] = useState("8");
-  const [label, setLabel] = useState("Abo");
-  const [recurrence, setRecurrence] = useState("none");
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const { toast } = useToast();
-
-  const handleCreate = async () => {
-    if (!date) { toast({ title: "Fehler", description: "Bitte Datum auswählen.", variant: "destructive" }); return; }
-    
-    const bookings: any[] = [];
-    const startDate = new Date(date);
-    const end = endDate ? new Date(endDate) : new Date(startDate);
-
-    let current = new Date(startDate);
-    while (current <= end) {
-      bookings.push({
-        court_number: parseInt(court),
-        date: formatDateISO(current),
-        start_hour: parseInt(hour),
-        booking_type: 'special',
-        special_label: label,
-        booker_vorname: 'Admin',
-        booker_nachname: 'System',
-        booker_geburtsjahr: 2000,
-        recurrence_type: recurrence,
-        created_by_admin: true,
-        is_joined: false,
-      });
-
-      if (recurrence === 'daily') current.setDate(current.getDate() + 1);
-      else if (recurrence === 'weekly') current.setDate(current.getDate() + 7);
-      else if (recurrence === 'monthly') current.setMonth(current.getMonth() + 1);
-      else break;
-    }
-
-    const { error } = await supabase.from('bookings').insert(bookings);
-    if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Erfolg", description: `${bookings.length} Sonderbuchung(en) erstellt.` });
-  };
-
-  return (
-    <Card>
-      <CardHeader><CardTitle className="font-display">Sonderbuchungen</CardTitle></CardHeader>
-      <CardContent className="space-y-4 max-w-lg">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Platz</Label>
-            <Select value={court} onValueChange={setCourt}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {[1,2,3,4,5,6].map(c => <SelectItem key={c} value={String(c)}>Platz {c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Uhrzeit</Label>
-            <Select value={hour} onValueChange={setHour}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Array.from({length:14},(_, i)=>i+8).map(h => <SelectItem key={h} value={String(h)}>{String(h).padStart(2,'0')}:00</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div>
-          <Label>Datum</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                <Calendar className="mr-2 h-4 w-4" />
-                {date ? format(date, 'dd.MM.yyyy') : <span className="text-muted-foreground">Datum wählen</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarPicker mode="single" selected={date} onSelect={setDate} locale={de} />
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div>
-          <Label>Bezeichnung</Label>
-          <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="z.B. Abo, Platz Gesperrt" />
-        </div>
-        <div>
-          <Label>Wiederholung</Label>
-          <Select value={recurrence} onValueChange={setRecurrence}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Einmalig</SelectItem>
-              <SelectItem value="daily">Täglich</SelectItem>
-              <SelectItem value="weekly">Wöchentlich</SelectItem>
-              <SelectItem value="monthly">Monatlich</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {recurrence !== 'none' && (
-          <div>
-            <Label>Enddatum</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, 'dd.MM.yyyy') : <span className="text-muted-foreground">Enddatum wählen</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarPicker mode="single" selected={endDate} onSelect={setEndDate} locale={de} />
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
-        <Button onClick={handleCreate}>Sonderbuchung erstellen</Button>
-      </CardContent>
-    </Card>
-  );
-}
+// SpecialBookingsTab moved to src/components/admin/SpecialBookingsTab.tsx
 
 // ===== Rules Tab =====
 function RulesTab() {

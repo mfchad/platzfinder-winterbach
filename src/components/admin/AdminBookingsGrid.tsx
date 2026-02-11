@@ -104,7 +104,7 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
             <div
               key={d.toISOString()}
               className={`text-center text-xs font-display font-semibold p-2 rounded-t-md bg-court-header text-primary-foreground cursor-pointer transition-all ${
-                hoveredDay === i ? "opacity-80 ring-1 ring-primary-foreground/50" : ""
+                hoveredDay === i ? "ring-2 ring-primary brightness-125" : ""
               }`}
               onClick={() => onDrillDown?.(d)}
               onMouseEnter={() => setHoveredDay(i)}
@@ -128,12 +128,12 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
                 <Tooltip key={dayStr}>
                   <TooltipTrigger asChild>
                     <div
-                      className={`border border-border rounded-sm min-h-[2rem] flex items-center justify-center text-xs cursor-pointer transition-colors ${
+                      className={`border rounded-sm min-h-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all ${
                         count === 0
-                          ? `bg-court-empty ${isHovered ? "bg-muted" : ""}`
+                          ? `bg-court-empty ${isHovered ? "bg-muted/70 border-primary/30 ring-1 ring-primary/20" : "border-border"}`
                           : count >= courtsCount
-                          ? `bg-court-full text-primary-foreground ${isHovered ? "opacity-85" : ""}`
-                          : `bg-court-half ${isHovered ? "opacity-85" : ""}`
+                          ? `bg-court-full text-primary-foreground ${isHovered ? "ring-1 ring-primary/40 brightness-110" : "border-border"}`
+                          : `bg-court-half ${isHovered ? "ring-1 ring-primary/40 brightness-110" : "border-border"}`
                       }`}
                       onClick={() => onDrillDown?.(d)}
                       onMouseEnter={() => setHoveredDay(i)}>

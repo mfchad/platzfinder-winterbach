@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Trash2, Edit, AlertTriangle } from "lucide-react";
+import { Calendar, CalendarCheck, Trash2, Edit, AlertTriangle, RefreshCw } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";
@@ -43,6 +43,7 @@ interface SeriesGroup {
   minDate: string;
   maxDate: string;
   bookings: Booking[];
+  recurrenceType: string;
 }
 
 export default function SpecialBookingsTab() {
@@ -72,7 +73,10 @@ export default function SpecialBookingsTab() {
   // Series management
   const [seriesGroups, setSeriesGroups] = useState<SeriesGroup[]>([]);
   const [deleteSeriesId, setDeleteSeriesId] = useState<string | null>(null);
-  const [editSeries, setEditSeries] = useState<SeriesGroup | null>(null);
+
+  // Edit mode
+  const [editingParentId, setEditingParentId] = useState<string | null>(null);
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
 
   const { toast } = useToast();
 
@@ -99,6 +103,7 @@ export default function SpecialBookingsTab() {
       minDate: bks.reduce((min, b) => (b.date < min ? b.date : min), bks[0].date),
       maxDate: bks.reduce((max, b) => (b.date > max ? b.date : max), bks[0].date),
       bookings: bks,
+      recurrenceType: bks[0].recurrence_type || "weekly",
     }));
 
     result.sort((a, b) => a.minDate.localeCompare(b.minDate));
@@ -189,6 +194,17 @@ export default function SpecialBookingsTab() {
       return;
     }
     setPendingBookings(bookings);
+
+    // If editing, show edit-specific confirmation first
+    if (editingParentId) {
+      setShowEditConfirm(true);
+    } else {
+      setShowSummary(true);
+    }
+  };
+
+  const handleEditConfirmProceed = () => {
+    setShowEditConfirm(false);
     setShowSummary(true);
   };
 
@@ -196,19 +212,35 @@ export default function SpecialBookingsTab() {
     setShowSummary(false);
     setIsSaving(true);
 
-    // Check for conflicts
+    // If editing, delete old series bookings first
+    let deleteOldIds: string[] = [];
+    if (editingParentId) {
+      const { data: oldBookings } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("recurrence_parent_id", editingParentId);
+      deleteOldIds = (oldBookings || []).map((b: any) => b.id);
+    }
+
+    // Check for conflicts (exclude special bookings AND the old series being edited)
     const dateSet = [...new Set(pendingBookings.map((b) => b.date))];
-    const { data: existing } = await supabase
+    const query = supabase
       .from("bookings")
       .select("*")
       .in("date", dateSet)
       .neq("booking_type", "special");
 
-    const existingBookings = (existing || []) as Booking[];
-    const found: ConflictInfo[] = [];
+    const { data: existing } = await query;
 
+    const existingBookings = (existing || []) as Booking[];
+    // Also exclude old series bookings from conflict check
+    const filteredExisting = editingParentId
+      ? existingBookings.filter((eb) => !deleteOldIds.includes(eb.id))
+      : existingBookings;
+
+    const found: ConflictInfo[] = [];
     for (const pb of pendingBookings) {
-      const conflict = existingBookings.find(
+      const conflict = filteredExisting.find(
         (eb) => eb.date === pb.date && eb.court_number === pb.court_number && eb.start_hour === pb.start_hour
       );
       if (conflict) {
@@ -221,14 +253,27 @@ export default function SpecialBookingsTab() {
       setShowConflicts(true);
       setIsSaving(false);
     } else {
-      await saveBookings(pendingBookings, []);
+      // Delete old series + save new
+      await saveBookings(pendingBookings, deleteOldIds);
     }
   };
 
   const handleOverwrite = async () => {
     setShowConflicts(false);
     const conflictIds = conflicts.map((c) => c.booking.id);
-    await saveBookings(pendingBookings, conflictIds);
+
+    // Also include old series bookings for deletion if editing
+    let allDeleteIds = [...conflictIds];
+    if (editingParentId) {
+      const { data: oldBookings } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("recurrence_parent_id", editingParentId);
+      const oldIds = (oldBookings || []).map((b: any) => b.id);
+      allDeleteIds = [...new Set([...allDeleteIds, ...oldIds])];
+    }
+
+    await saveBookings(pendingBookings, allDeleteIds);
   };
 
   const saveBookings = async (bookings: any[], deleteIds: string[]) => {
@@ -273,7 +318,12 @@ export default function SpecialBookingsTab() {
         }
       }
 
-      toast({ title: "Erfolg", description: `${bookings.length} Sonderbuchung(en) erstellt.` });
+      toast({
+        title: "Erfolg",
+        description: editingParentId
+          ? `Serie aktualisiert: ${bookings.length} Buchung(en).`
+          : `${bookings.length} Sonderbuchung(en) erstellt.`,
+      });
       resetForm();
       loadSeries();
     } finally {
@@ -295,6 +345,7 @@ export default function SpecialBookingsTab() {
     setWeeklyLabel("Abo");
     setPendingBookings([]);
     setConflicts([]);
+    setEditingParentId(null);
   };
 
   const handleDeleteSeries = async () => {
@@ -309,14 +360,64 @@ export default function SpecialBookingsTab() {
     setDeleteSeriesId(null);
   };
 
+  const handleEditSeries = (sg: SeriesGroup) => {
+    // Populate form from series bookings
+    const bks = sg.bookings;
+    const isEinmalig = sg.recurrenceType === "einmalig";
+
+    setEditingParentId(sg.parentId);
+
+    if (isEinmalig) {
+      setMode("einmalig");
+      // All bookings share same date
+      setEinmaligDate(new Date(bks[0].date + "T00:00:00"));
+      const courts = [...new Set(bks.map((b) => b.court_number))].sort();
+      setEinmaligCourts(courts);
+      const hours = bks.map((b) => b.start_hour).sort((a, b) => a - b);
+      setEinmaligStartHour(String(Math.min(...hours)));
+      setEinmaligEndHour(String(Math.max(...hours) + 1));
+      setEinmaligLabel(bks[0].special_label || "Abo");
+    } else {
+      setMode("woechentlich");
+      setWeeklyStartDate(new Date(sg.minDate + "T00:00:00"));
+      setWeeklyEndDate(new Date(sg.maxDate + "T00:00:00"));
+      const courts = [...new Set(bks.map((b) => b.court_number))].sort();
+      setWeeklyCourts(courts);
+      const hours = [...new Set(bks.map((b) => b.start_hour))].sort((a, b) => a - b);
+      setWeeklyHours(hours);
+      // Derive weekdays from bookings
+      const days = [...new Set(bks.map((b) => getDay(new Date(b.date + "T00:00:00"))))];
+      setWeeklyDays(days);
+      setWeeklyLabel(bks[0].special_label || "Abo");
+    }
+
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast({ title: "Bearbeiten", description: "Serie-Parameter wurden in das Formular geladen." });
+  };
+
   return (
     <div className="space-y-6">
       {/* ===== Batch Booking Form ===== */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-display">Sonderbuchung erstellen</CardTitle>
+          <CardTitle className="font-display flex items-center justify-between">
+            {editingParentId ? "Serie bearbeiten" : "Sonderbuchung erstellen"}
+            {editingParentId && (
+              <Button variant="outline" size="sm" onClick={resetForm}>
+                Abbrechen
+              </Button>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {editingParentId && (
+            <div className="bg-muted border border-border rounded-md p-3 text-sm text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Sie bearbeiten eine bestehende Serie. Änderungen überschreiben alle Termine dieser Serie.
+            </div>
+          )}
+
           {/* Mode selector */}
           <div>
             <Label>Buchungstyp</Label>
@@ -353,7 +454,7 @@ export default function SpecialBookingsTab() {
           )}
 
           <Button onClick={handlePreview} disabled={isSaving}>
-            Vorschau & Erstellen
+            {editingParentId ? "Änderungen prüfen" : "Vorschau & Erstellen"}
           </Button>
         </CardContent>
       </Card>
@@ -375,6 +476,7 @@ export default function SpecialBookingsTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Typ</TableHead>
                     <TableHead>Bezeichnung</TableHead>
                     <TableHead>Zeitraum</TableHead>
                     <TableHead>Termine</TableHead>
@@ -384,6 +486,15 @@ export default function SpecialBookingsTab() {
                 <TableBody>
                   {seriesGroups.map((sg) => (
                     <TableRow key={sg.parentId}>
+                      <TableCell>
+                        <span title={sg.recurrenceType === "einmalig" ? "Einmalig" : "Wöchentlich"}>
+                          {sg.recurrenceType === "einmalig" ? (
+                            <CalendarCheck className="h-4 w-4 text-primary" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </span>
+                      </TableCell>
                       <TableCell className="font-medium">{sg.label}</TableCell>
                       <TableCell className="text-sm">
                         {sg.minDate === sg.maxDate
@@ -395,7 +506,16 @@ export default function SpecialBookingsTab() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleEditSeries(sg)}
+                          title="Bearbeiten"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setDeleteSeriesId(sg.parentId)}
+                          title="Löschen"
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -409,6 +529,28 @@ export default function SpecialBookingsTab() {
         </CardContent>
       </Card>
 
+      {/* ===== Edit Confirmation Dialog ===== */}
+      <Dialog open={showEditConfirm} onOpenChange={setShowEditConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Serie bearbeiten
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">
+            Sie bearbeiten eine Serie. Dies wird <strong>alle bestehenden Termine</strong> dieser Serie
+            (einschließlich manueller Änderungen) überschreiben. Fortfahren?
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowEditConfirm(false)}>Abbrechen</Button>
+            <Button onClick={handleEditConfirmProceed}>
+              Fortfahren
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ===== Summary Dialog ===== */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
         <DialogContent>
@@ -416,7 +558,7 @@ export default function SpecialBookingsTab() {
             <DialogTitle className="font-display">Zusammenfassung</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 text-sm">
-            <p><strong>{pendingBookings.length}</strong> Buchung(en) werden erstellt.</p>
+            <p><strong>{pendingBookings.length}</strong> Buchung(en) werden {editingParentId ? "aktualisiert" : "erstellt"}.</p>
             {pendingBookings.length > 0 && (
               <>
                 <p>Typ: <strong>{mode === "einmalig" ? "Einmalig" : "Wöchentlich"}</strong></p>

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { User, UserPlus, UserCheck } from "lucide-react";
+import { User, Users, UserPlus, UserCheck } from "lucide-react";
 import type { Booking } from "@/lib/types";
 import { anonymizeName } from "@/lib/types";
 
@@ -131,15 +131,18 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
   }
 
   // Full or joined half booking
+  const isDouble = booking.booking_type === 'double';
+  const PlayerIcon = isDouble ? Users : UserCheck;
+
   return (
     <div className="court-cell court-cell-full overflow-hidden cursor-pointer hover:shadow-md" onClick={onClick}>
       <div className="h-full flex">
         <div className="w-1/2 flex flex-col items-center justify-center p-1">
-          <UserCheck className="w-4 h-4" />
+          <PlayerIcon className="w-4 h-4" />
           <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.booker_vorname)}</span>
         </div>
         <div className="w-1/2 flex flex-col items-center justify-center p-1 border-l border-primary-foreground/20">
-          <UserCheck className="w-4 h-4" />
+          <PlayerIcon className="w-4 h-4" />
           {booking.is_joined && booking.partner_vorname && (
             <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.partner_vorname)}</span>
           )}

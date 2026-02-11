@@ -27,7 +27,8 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
   const [editComment, setEditComment] = useState(booking.booker_comment || "");
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [infoData, setInfoData] = useState<{ name: string; comment: string } | null>(null);
+  const [verified, setVerified] = useState(false);
+  const [infoData, setInfoData] = useState<{ names: string[]; comments: string[] } | null>(null);
   const { toast } = useToast();
 
   const isHalf = booking.booking_type === 'half' && !booking.is_joined;
@@ -37,6 +38,7 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
     setAction(null);
     setVorname(""); setNachname(""); setGeburtsjahr("");
     setComment(""); setShowConfirm(false); setInfoData(null);
+    setVerified(false);
   };
 
   const handleClose = () => {
@@ -50,7 +52,6 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
       toast({ title: "Fehler", description: "Bitte alle Felder ausfüllen.", variant: "destructive" });
       return false;
     }
-    // Check if credentials match the booker
     if (
       vorname.trim().toLowerCase() !== booking.booker_vorname.toLowerCase() ||
       nachname.trim().toLowerCase() !== booking.booker_nachname.toLowerCase() ||
@@ -60,6 +61,37 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
       return false;
     }
     return true;
+  };
+
+  // Verify as either booker or partner
+  const verifyParticipant = async (): Promise<'booker' | 'partner' | false> => {
+    const gj = parseInt(geburtsjahr, 10);
+    if (!vorname.trim() || !nachname.trim() || isNaN(gj)) {
+      toast({ title: "Fehler", description: "Bitte alle Felder ausfüllen.", variant: "destructive" });
+      return false;
+    }
+    // Check booker
+    if (
+      vorname.trim().toLowerCase() === booking.booker_vorname.toLowerCase() &&
+      nachname.trim().toLowerCase() === booking.booker_nachname.toLowerCase() &&
+      gj === booking.booker_geburtsjahr
+    ) {
+      return 'booker';
+    }
+    // Check partner (if joined)
+    if (
+      booking.is_joined &&
+      booking.partner_vorname &&
+      booking.partner_nachname &&
+      booking.partner_geburtsjahr &&
+      vorname.trim().toLowerCase() === booking.partner_vorname.toLowerCase() &&
+      nachname.trim().toLowerCase() === booking.partner_nachname.toLowerCase() &&
+      gj === booking.partner_geburtsjahr
+    ) {
+      return 'partner';
+    }
+    toast({ title: "Fehler", description: "Die Angaben stimmen nicht mit einem Teilnehmer überein.", variant: "destructive" });
+    return false;
   };
 
   const handleCancel = async () => {
@@ -80,9 +112,9 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
     } finally { setLoading(false); }
   };
 
-  const handleEdit = async () => {
+  const handleVerifyForEdit = async () => {
     if (!await verifyBooker()) return;
-    setAction('edit');
+    setVerified(true);
     setEditComment(booking.booker_comment || "");
   };
 
@@ -107,7 +139,6 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
       toast({ title: "Fehler", description: "Bitte alle Felder ausfüllen.", variant: "destructive" });
       return;
     }
-    // Verify as member
     setLoading(true);
     const isMember = await verifyMember(vorname, nachname, gj);
     if (!isMember) {
@@ -134,10 +165,24 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
   };
 
   const handleShowInfo = async () => {
-    if (!await verifyBooker()) return;
+    const role = await verifyParticipant();
+    if (!role) return;
+
+    const names: string[] = [`${booking.booker_vorname} ${booking.booker_nachname}`];
+    const comments: string[] = [];
+    if (booking.booker_comment) comments.push(`Bucher: ${booking.booker_comment}`);
+
+    if (booking.is_joined && booking.partner_vorname) {
+      names.push(`${booking.partner_vorname} ${booking.partner_nachname}`);
+      if (booking.partner_comment) comments.push(`Mitspieler: ${booking.partner_comment}`);
+    }
+    if (booking.double_match_names) {
+      comments.push(`Mitspieler: ${booking.double_match_names}`);
+    }
+
     setInfoData({
-      name: `${booking.partner_vorname || ''} ${booking.partner_nachname || ''}`,
-      comment: booking.partner_comment || 'Kein Kommentar hinterlassen.',
+      names,
+      comments: comments.length > 0 ? comments : ['Keine Kommentare hinterlassen.'],
     });
   };
 
@@ -150,7 +195,7 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
             <DialogTitle className="font-display">Halbbuchung — Platz {booking.court_number}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm"><strong>Bucher:</strong> {booking.booker_vorname}</p>
+            <p className="text-sm"><strong>Bucher:</strong> {booking.booker_vorname} {booking.booker_nachname}</p>
             {booking.booker_comment && (
               <p className="text-sm bg-muted p-2 rounded-md">"{booking.booker_comment}"</p>
             )}
@@ -177,9 +222,7 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
             <p className="text-sm">Dieser Platz ist vollständig gebucht.</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="destructive" size="sm" onClick={() => setAction('cancel')}>Absagen</Button>
-              {booking.is_joined && booking.partner_vorname && (
-                <Button variant="outline" size="sm" onClick={() => setAction('info')}>Zeigt Information</Button>
-              )}
+              <Button variant="outline" size="sm" onClick={() => setAction('info')}>Zeigt Information</Button>
             </div>
           </div>
         </DialogContent>
@@ -216,10 +259,9 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
     );
   }
 
-  // Edit action (half booking)
+  // Edit action (half booking) — fixed: use verified flag instead of checking vorname
   if (action === 'edit') {
-    const needsVerify = vorname === '';
-    if (needsVerify) {
+    if (!verified) {
       return (
         <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
           <DialogContent className="max-w-md">
@@ -232,7 +274,7 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
                 setVorname={setVorname} setNachname={setNachname} setGeburtsjahr={setGeburtsjahr} />
               <div className="flex gap-2">
                 <Button variant="outline" onClick={resetAction}>Zurück</Button>
-                <Button onClick={handleEdit} disabled={loading}>Weiter</Button>
+                <Button onClick={handleVerifyForEdit} disabled={loading}>Weiter</Button>
               </div>
             </div>
           </DialogContent>
@@ -288,17 +330,17 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
     );
   }
 
-  // Info action
+  // Info action — available for all completed bookings, verifies booker OR partner
   if (action === 'info') {
     if (!infoData) {
       return (
         <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-display">Mitspieler-Information</DialogTitle>
+              <DialogTitle className="font-display">Buchungsinformation</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <p className="text-sm">Bitte bestätigen Sie Ihre Identität als Bucher:</p>
+              <p className="text-sm">Bitte bestätigen Sie Ihre Identität als Teilnehmer:</p>
               <IdentityForm vorname={vorname} nachname={nachname} geburtsjahr={geburtsjahr}
                 setVorname={setVorname} setNachname={setNachname} setGeburtsjahr={setGeburtsjahr} />
               <div className="flex gap-2">
@@ -314,11 +356,21 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
       <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">Mitspieler-Information</DialogTitle>
+            <DialogTitle className="font-display">Buchungsinformation</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm"><strong>Name:</strong> {infoData.name}</p>
-            <p className="text-sm"><strong>Kommentar:</strong> {infoData.comment}</p>
+            <div>
+              <p className="text-sm font-medium mb-1">Teilnehmer:</p>
+              {infoData.names.map((name, i) => (
+                <p key={i} className="text-sm">• {name}</p>
+              ))}
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">Kommentare:</p>
+              {infoData.comments.map((c, i) => (
+                <p key={i} className="text-sm bg-muted p-2 rounded-md">{c}</p>
+              ))}
+            </div>
             <Button variant="outline" onClick={handleClose}>Schließen</Button>
           </div>
         </DialogContent>

@@ -34,8 +34,17 @@ Deno.serve(async (req) => {
 
     const emailEnabled = emailRule?.rule_value === "true";
 
-    // Current time
-    const now = new Date();
+    // Get current time in Europe/Berlin
+    const nowUtc = Date.now();
+
+    // Helper: get the UTC offset in ms for Europe/Berlin at a given UTC timestamp
+    function getBerlinOffsetMs(utcMs: number): number {
+      // Format a date in Europe/Berlin to extract the offset
+      const dt = new Date(utcMs);
+      const berlinStr = dt.toLocaleString("en-US", { timeZone: "Europe/Berlin" });
+      const berlinDate = new Date(berlinStr);
+      return berlinDate.getTime() - dt.getTime();
+    }
 
     // Find all unjoined half-bookings
     const { data: halfBookings, error: fetchError } = await supabase
@@ -50,9 +59,14 @@ Deno.serve(async (req) => {
     const toNotify: Array<{ email: string; vorname: string; date: string; hour: number }> = [];
 
     for (const booking of halfBookings || []) {
-      // Build the booking start datetime (date + start_hour in UTC+1 approx)
-      const bookingStart = new Date(`${booking.date}T${String(booking.start_hour).padStart(2, "0")}:00:00`);
-      const hoursUntilStart = (bookingStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+      // Interpret booking.date + booking.start_hour as Europe/Berlin local time
+      // Create a UTC timestamp that represents that Berlin local time
+      const localIso = `${booking.date}T${String(booking.start_hour).padStart(2, "0")}:00:00`;
+      // Parse as UTC first, then subtract the Berlin offset to get the true UTC moment
+      const naiveUtcMs = new Date(localIso + "Z").getTime();
+      const berlinOffset = getBerlinOffsetMs(naiveUtcMs);
+      const bookingStartUtcMs = naiveUtcMs - berlinOffset;
+      const hoursUntilStart = (bookingStartUtcMs - nowUtc) / (1000 * 60 * 60);
 
       if (hoursUntilStart < expiryHours) {
         toDelete.push(booking.id);

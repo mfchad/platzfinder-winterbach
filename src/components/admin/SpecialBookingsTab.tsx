@@ -655,6 +655,33 @@ export default function SpecialBookingsTab() {
   );
 }
 
+// ===== Einmalig Date Picker (auto-close on select) =====
+function EinmaligDatePicker({ date, setDate }: { date: Date | undefined; setDate: (d: Date | undefined) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Label>Datum</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="w-full justify-start text-left font-normal">
+            <Calendar className="mr-2 h-4 w-4" />
+            {date ? format(date, "dd.MM.yyyy") : <span className="text-muted-foreground">Datum wählen</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <CalendarPicker
+            mode="single"
+            selected={date}
+            onSelect={(d) => { setDate(d); if (d) setOpen(false); }}
+            locale={de}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 // ===== Einmalig Form =====
 function EinmaligForm({
   date, setDate, courts, setCourts, startHour, setStartHour, endHour, setEndHour, label, setLabel, toggleInArray,
@@ -668,20 +695,7 @@ function EinmaligForm({
 }) {
   return (
     <div className="space-y-4 max-w-lg">
-      <div>
-        <Label>Datum</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-start text-left font-normal">
-              <Calendar className="mr-2 h-4 w-4" />
-              {date ? format(date, "dd.MM.yyyy") : <span className="text-muted-foreground">Datum wählen</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <CalendarPicker mode="single" selected={date} onSelect={setDate} locale={de} className="pointer-events-auto" />
-          </PopoverContent>
-        </Popover>
-      </div>
+      <EinmaligDatePicker date={date} setDate={setDate} />
 
       <div>
         <Label>Plätze</Label>

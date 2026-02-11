@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -11,6 +12,7 @@ interface DateNavigationProps {
 }
 
 export default function DateNavigation({ date, onDateChange }: DateNavigationProps) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const goLeft = () => {
     const d = new Date(date);
     d.setDate(d.getDate() - 1);
@@ -38,7 +40,7 @@ export default function DateNavigation({ date, onDateChange }: DateNavigationPro
         <Button variant="outline" size="icon" onClick={goRight} className="h-8 w-8">
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Popover>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8">
               <Calendar className="h-4 w-4" />
@@ -48,8 +50,9 @@ export default function DateNavigation({ date, onDateChange }: DateNavigationPro
             <CalendarPicker
               mode="single"
               selected={date}
-              onSelect={(d) => d && onDateChange(d)}
+              onSelect={(d) => { if (d) { onDateChange(d); setCalendarOpen(false); } }}
               locale={de}
+              className="pointer-events-auto"
             />
           </PopoverContent>
         </Popover>

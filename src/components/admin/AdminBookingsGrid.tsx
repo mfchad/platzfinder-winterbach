@@ -170,7 +170,7 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
               Möchten Sie diese Buchung wirklich löschen?
             </DialogDescription>
           </DialogHeader>
-          {deleteTarget?.recurrence_parent_id && (
+          {(deleteTarget?.recurrence_parent_id || deleteTarget?.recurrence_type) && (
             <p className="text-sm font-bold text-foreground">
               Hinweis: Dieser Termin gehört zu einer Serie. Änderungen hier betreffen nur diesen Termin. Um die gesamte Serie zu ändern, nutzen Sie bitte die Seite Sonderbuchungen.
             </p>

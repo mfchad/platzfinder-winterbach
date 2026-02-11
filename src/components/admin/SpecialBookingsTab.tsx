@@ -740,37 +740,45 @@ function WeeklyForm({
   label: string; setLabel: (l: string) => void;
   toggleInArray: (arr: number[], val: number) => number[];
 }) {
+  const [rangeOpen, setRangeOpen] = useState(false);
+
+  const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    setStartDate(range?.from);
+    setEndDate(range?.to);
+    // Auto-close when both dates are selected
+    if (range?.from && range?.to) {
+      setTimeout(() => setRangeOpen(false), 150);
+    }
+  };
+
+  const rangeLabel = startDate && endDate
+    ? `${format(startDate, "dd.MM.yyyy")} – ${format(endDate, "dd.MM.yyyy")}`
+    : startDate
+      ? `${format(startDate, "dd.MM.yyyy")} – …`
+      : null;
+
   return (
     <div className="space-y-4 max-w-lg">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Startdatum</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                <Calendar className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "dd.MM.yyyy") : <span className="text-muted-foreground">Startdatum</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarPicker mode="single" selected={startDate} onSelect={setStartDate} locale={de} className="pointer-events-auto" />
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div>
-          <Label>Enddatum</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                <Calendar className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "dd.MM.yyyy") : <span className="text-muted-foreground">Enddatum</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarPicker mode="single" selected={endDate} onSelect={setEndDate} locale={de} className="pointer-events-auto" />
-            </PopoverContent>
-          </Popover>
-        </div>
+      <div>
+        <Label>Zeitraum</Label>
+        <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start text-left font-normal">
+              <Calendar className="mr-2 h-4 w-4" />
+              {rangeLabel || <span className="text-muted-foreground">Start- und Enddatum wählen</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarPicker
+              mode="range"
+              selected={startDate ? { from: startDate, to: endDate } : undefined}
+              onSelect={handleRangeSelect as any}
+              locale={de}
+              numberOfMonths={2}
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div>

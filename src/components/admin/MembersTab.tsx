@@ -100,6 +100,26 @@ export default function MembersTab() {
     load();
   };
 
+  const seedDummyMembers = async () => {
+    const dummies = Array.from({ length: 100 }, (_, i) => ({
+      vorname: `Test${i + 1}`,
+      nachname: `User${i + 1}`,
+      geburtsjahr: 1950 + Math.floor(Math.random() * 61),
+      email: `dummy-test-testuser${i + 1}@example.com`,
+    }));
+    const { error } = await supabase.from("members").insert(dummies);
+    if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Erfolg", description: "100 Dummy-Mitglieder erstellt." });
+    load();
+  };
+
+  const cleanupDummyMembers = async () => {
+    const { error } = await supabase.from("members").delete().like("email", "%dummy-test%");
+    if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Erfolg", description: "Dummy-Daten gelöscht." });
+    load();
+  };
+
   const filtered = useMemo(() =>
     members.filter(m =>
       !search || `${m.vorname} ${m.nachname}`.toLowerCase().includes(search.toLowerCase())
@@ -252,6 +272,12 @@ export default function MembersTab() {
             </div>
             <Button size="sm" variant="outline" onClick={() => setShowBulk(true)}>
               <Upload className="h-4 w-4 mr-1" /> Bulk Upload
+            </Button>
+            <Button size="sm" variant="outline" onClick={seedDummyMembers} className="border-dashed text-muted-foreground">
+              + 100 Dummy
+            </Button>
+            <Button size="sm" variant="outline" onClick={cleanupDummyMembers} className="border-dashed text-destructive">
+              <Trash2 className="h-4 w-4 mr-1" /> Cleanup Dummy
             </Button>
           </div>
         </CardTitle>

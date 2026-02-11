@@ -55,6 +55,11 @@ export default function AdminBookingsTab() {
     loadBookings();
   };
 
+  const updateBooking = async (id: string, updates: Partial<Booking>) => {
+    await supabase.from("bookings").update(updates).eq("id", id);
+    loadBookings();
+  };
+
   const handleDrillDown = useCallback((targetDate: Date, scale: "day" | "week" | "month") => {
     setDate(targetDate);
     setTimeScale(scale);
@@ -145,6 +150,7 @@ export default function AdminBookingsTab() {
             endHour={endHour}
             courtsCount={courtsCount}
             onDelete={deleteBooking}
+            onUpdate={updateBooking}
             onDrillDown={handleDrillDown}
           />
         ) : (

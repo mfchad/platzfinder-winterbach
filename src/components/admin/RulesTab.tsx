@@ -173,6 +173,11 @@ export default function RulesTab() {
     items: RULE_META.filter(m => m.group === group),
   }));
 
+  // Check for half_booking_max_hours > booking_window_hours conflict
+  const halfMaxHours = parseInt(getValue("half_booking_max_hours")) || 0;
+  const bookingWindowHours = parseInt(getValue("booking_window_hours")) || 0;
+  const showHalfBookingHint = halfMaxHours > bookingWindowHours && bookingWindowHours > 0;
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
@@ -182,6 +187,12 @@ export default function RulesTab() {
             <Save className="h-4 w-4 mr-1" /> Änderungen speichern
           </Button>
         </div>
+
+        {showHalfBookingHint && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3 text-sm text-amber-800 dark:text-amber-200">
+            <strong>Hinweis:</strong> Halbbuchungen können nun länger im Voraus geplant werden als reguläre Buchungen.
+          </div>
+        )}
 
         {grouped.map(({ group, items }) => (
           <Card key={group}>

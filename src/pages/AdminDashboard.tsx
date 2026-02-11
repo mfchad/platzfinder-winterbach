@@ -9,9 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, LogOut, Trash2, Edit, Plus, Upload } from "lucide-react";
+import { ArrowLeft, LogOut, Trash2, Edit, Plus, Upload, Calendar } from "lucide-react";
+import { de } from "date-fns/locale";
+import { format } from "date-fns";
 import type { Member, Booking, BookingRule } from "@/lib/types";
 import DateNavigation from "@/components/DateNavigation";
 import { formatDateISO, anonymizeName } from "@/lib/types";
@@ -217,11 +221,11 @@ function MembersTab() {
 // ===== Special Bookings Tab =====
 function SpecialBookingsTab() {
   const [court, setCourt] = useState("1");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [hour, setHour] = useState("8");
   const [label, setLabel] = useState("Abo");
   const [recurrence, setRecurrence] = useState("none");
-  const [endDate, setEndDate] = useState("");
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
 
   const handleCreate = async () => {
@@ -229,7 +233,7 @@ function SpecialBookingsTab() {
     
     const bookings: any[] = [];
     const startDate = new Date(date);
-    const end = endDate ? new Date(endDate) : startDate;
+    const end = endDate ? new Date(endDate) : new Date(startDate);
 
     let current = new Date(startDate);
     while (current <= end) {
@@ -284,7 +288,17 @@ function SpecialBookingsTab() {
         </div>
         <div>
           <Label>Datum</Label>
-          <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                <Calendar className="mr-2 h-4 w-4" />
+                {date ? format(date, 'dd.MM.yyyy') : <span className="text-muted-foreground">Datum wählen</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarPicker mode="single" selected={date} onSelect={setDate} locale={de} />
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label>Bezeichnung</Label>
@@ -305,7 +319,17 @@ function SpecialBookingsTab() {
         {recurrence !== 'none' && (
           <div>
             <Label>Enddatum</Label>
-            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, 'dd.MM.yyyy') : <span className="text-muted-foreground">Enddatum wählen</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarPicker mode="single" selected={endDate} onSelect={setEndDate} locale={de} />
+              </PopoverContent>
+            </Popover>
           </div>
         )}
         <Button onClick={handleCreate}>Sonderbuchung erstellen</Button>

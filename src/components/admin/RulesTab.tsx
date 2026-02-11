@@ -32,14 +32,14 @@ const RULE_META: RuleMeta[] = [
   { key: "core_time_end", label: "Kernzeit Ende (Stunde)", hint: "Bis zu welcher Uhrzeit gelten die strengeren Kernzeit-Limits?", group: "Kernzeit-Regeln", type: "number" },
   { key: "core_time_days", label: "Kernzeit-Wochentage", hint: "An welchen Wochentagen gelten die Kernzeit-Regeln?", group: "Kernzeit-Regeln", type: "weekdays" },
   // Spiel-Limits
-  { key: "single_max_per_day", label: "Einzel: Max. Stunden/Tag", hint: "Wie viele Stunden darf ein Mitglied pro Tag Einzel spielen (in der Kernzeit)?", group: "Spiel-Limits", type: "number" },
-  { key: "single_max_per_week", label: "Einzel: Max. Stunden/Woche", hint: "Wie viele Stunden darf ein Mitglied pro Woche Einzel spielen (in der Kernzeit)?", group: "Spiel-Limits", type: "number" },
-  { key: "double_max_per_day", label: "Doppel: Max. Stunden/Tag", hint: "Wie viele Stunden darf ein Mitglied pro Tag Doppel spielen (in der Kernzeit)?", group: "Spiel-Limits", type: "number" },
-  { key: "double_max_per_week", label: "Doppel: Max. Stunden/Woche", hint: "Wie viele Stunden darf ein Mitglied pro Woche Doppel spielen (in der Kernzeit)?", group: "Spiel-Limits", type: "number" },
+  { key: "single_max_per_day", label: "Einzel: Max. Stunden/Tag", hint: "Wie viele Stunden darf ein Mitglied pro Tag Einzel spielen (in der Kernzeit)?", group: "Spiel-Limits in der Kernzeit", type: "number" },
+  { key: "single_max_per_week", label: "Einzel: Max. Stunden/Woche", hint: "Wie viele Stunden darf ein Mitglied pro Woche Einzel spielen (in der Kernzeit)?", group: "Spiel-Limits in der Kernzeit", type: "number" },
+  { key: "double_max_per_day", label: "Doppel: Max. Stunden/Tag", hint: "Wie viele Stunden darf ein Mitglied pro Tag Doppel spielen (in der Kernzeit)?", group: "Spiel-Limits in der Kernzeit", type: "number" },
+  { key: "double_max_per_week", label: "Doppel: Max. Stunden/Woche", hint: "Wie viele Stunden darf ein Mitglied pro Woche Doppel spielen (in der Kernzeit)?", group: "Spiel-Limits in der Kernzeit", type: "number" },
   // Halbbuchungen
   { key: "half_booking_max_hours", label: "Max. Vorlauf (Stunden)", hint: "Bis wie viele Stunden vor Beginn kann eine Halbbuchung erstellt werden?", group: "Halbbuchungen", type: "number" },
   { key: "half_booking_min_hours", label: "Min. Vorlauf (Stunden)", hint: "Mindestens wie viele Stunden vor Beginn muss eine Halbbuchung erstellt werden?", group: "Halbbuchungen", type: "number" },
-  { key: "half_booking_expiry_hours", label: "Verfall nach (Stunden)", hint: "Wenn niemand beitritt, wird die Halbbuchung X Stunden vor Beginn automatisch gelöscht.", group: "Halbbuchungen", type: "number" },
+  { key: "half_booking_expiry_hours", label: "Stornierung bei fehlendem Partner (Stunden vor Beginn)", hint: "Wenn eine Halbbuchung bis zu diesem Zeitpunkt nicht vervollständigt wurde, wird sie automatisch gelöscht, um den Platz für andere freizugeben.", group: "Halbbuchungen", type: "number" },
   // System
   { key: "email_notifications_enabled", label: "E-Mail-Benachrichtigungen", hint: "Sollen E-Mail-Benachrichtigungen bei Buchungsänderungen versendet werden?", group: "System", type: "boolean" },
 ];
@@ -59,7 +59,7 @@ const GROUP_ORDER = [
   "Platz-Einstellungen",
   "Buchungs-Fenster",
   "Kernzeit-Regeln",
-  "Spiel-Limits",
+  "Spiel-Limits in der Kernzeit",
   "Halbbuchungen",
   "System",
 ];

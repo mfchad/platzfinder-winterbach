@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus, Upload, Save, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { Member } from "@/lib/types";
 
 const PAGE_SIZE = 50;
@@ -236,7 +237,7 @@ export default function MembersTab() {
         <CardTitle className="font-display flex items-center justify-between flex-wrap gap-2">
           <span className="flex items-center gap-2">
             Mitgliederverwaltung
-            <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{members.length}</span>
+            <Badge variant="secondary" className="text-xs font-normal">{members.length} Mitglieder</Badge>
           </span>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -311,8 +312,8 @@ export default function MembersTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 z-10 bg-background min-w-[120px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border/50">Vorname</TableHead>
-                <TableHead className="sticky left-[120px] z-10 bg-background min-w-[120px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:shadow-[2px_0_4px_rgba(0,0,0,0.05)]">Nachname</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-background min-w-[120px]">Vorname</TableHead>
+                <TableHead className="sticky left-[120px] z-10 bg-background min-w-[120px] border-r border-border/40">Nachname</TableHead>
                 <TableHead className="min-w-[100px]">Geburtsjahr</TableHead>
                 <TableHead className="min-w-[200px]">E-Mail</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -333,9 +334,9 @@ export default function MembersTab() {
                     {(["vorname", "nachname", "geburtsjahr", "email"] as const).map((field, colIdx) => {
                       const isSticky = field === "vorname" || field === "nachname";
                       const stickyClass = field === "vorname"
-                        ? "sticky left-0 z-10 bg-background after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border/50"
+                        ? "sticky left-0 z-10 bg-background"
                         : field === "nachname"
-                        ? "sticky left-[120px] z-10 bg-background after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
+                        ? "sticky left-[120px] z-10 bg-background border-r border-border/40"
                         : "";
 
                       return (

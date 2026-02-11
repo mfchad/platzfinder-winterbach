@@ -190,7 +190,7 @@ export default function RulesTab() {
 
         {showHalfBookingHint && (
           <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3 text-sm text-amber-800 dark:text-amber-200">
-            <strong>Hinweis:</strong> Halbbuchungen können nun länger im Voraus geplant werden als reguläre Buchungen.
+            <strong>Hinweis:</strong> Da das allgemeine Buchungs-Fenster auf {bookingWindowHours} Stunden begrenzt ist, können Halbbuchungen trotz dieser Einstellung nicht früher als {bookingWindowHours} Stunden im Voraus getätigt werden.
           </div>
         )}
 

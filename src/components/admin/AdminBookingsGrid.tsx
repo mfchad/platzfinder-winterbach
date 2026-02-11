@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { User, Users, UserPlus, UserCheck, Trash2 } from "lucide-react";
+import { User, Users, UserPlus, UserCheck, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -10,6 +11,7 @@ import { format, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
+import { verifyMember } from "@/lib/booking-validation";
 
 interface AdminBookingsGridProps {
   bookings: Booking[];
@@ -51,25 +53,37 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
   const [editTarget, setEditTarget] = useState<Booking | null>(null);
   const [editVorname, setEditVorname] = useState("");
   const [editNachname, setEditNachname] = useState("");
+  const [editGeburtsjahr, setEditGeburtsjahr] = useState("");
   const [editType, setEditType] = useState("");
   const [showEditDeleteConfirm, setShowEditDeleteConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const openEdit = (booking: Booking) => {
     setEditTarget(booking);
     setEditVorname(booking.booker_vorname);
     setEditNachname(booking.booker_nachname);
+    setEditGeburtsjahr(String(booking.booker_geburtsjahr));
     setEditType(booking.booking_type);
     setShowEditDeleteConfirm(false);
   };
 
-  const saveEdit = () => {
-    if (editTarget && onUpdate) {
-      onUpdate(editTarget.id, {
-        booker_vorname: editVorname,
-        booker_nachname: editNachname,
-        booking_type: editType as Booking['booking_type'],
-      });
+  const saveEdit = async () => {
+    if (!editTarget || !onUpdate) return;
+    const nameChanged = editVorname.trim() !== editTarget.booker_vorname || editNachname.trim() !== editTarget.booker_nachname || editGeburtsjahr.trim() !== String(editTarget.booker_geburtsjahr);
+    if (nameChanged) {
+      const gj = parseInt(editGeburtsjahr, 10);
+      if (isNaN(gj)) { toast.error("Bitte gültiges Geburtsjahr eingeben."); return; }
+      setSaving(true);
+      const valid = await verifyMember(editVorname, editNachname, gj);
+      setSaving(false);
+      if (!valid) { toast.error("Kein Mitglied mit diesen Daten gefunden."); return; }
     }
+    onUpdate(editTarget.id, {
+      booker_vorname: editVorname.trim(),
+      booker_nachname: editNachname.trim(),
+      booker_geburtsjahr: parseInt(editGeburtsjahr, 10),
+      booking_type: editType as Booking['booking_type'],
+    });
     setEditTarget(null);
   };
 
@@ -154,6 +168,10 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
                   </div>
                 </div>
                 <div>
+                  <Label htmlFor="edit-geburtsjahr">Geburtsjahr</Label>
+                  <Input id="edit-geburtsjahr" type="number" value={editGeburtsjahr} onChange={e => setEditGeburtsjahr(e.target.value)} />
+                </div>
+                <div>
                   <Label htmlFor="edit-type">Buchungstyp</Label>
                   <Select value={editType} onValueChange={setEditType}>
                     <SelectTrigger>
@@ -163,7 +181,6 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
                       <SelectItem value="full">Einzel</SelectItem>
                       <SelectItem value="half">Halbbuchung</SelectItem>
                       <SelectItem value="double">Doppel</SelectItem>
-                      <SelectItem value="special">Sonderbuchung</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -183,7 +200,10 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
                 </Button>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setEditTarget(null)}>Abbrechen</Button>
-                  <Button onClick={saveEdit}>Speichern</Button>
+                  <Button onClick={saveEdit} disabled={saving}>
+                    {saving && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                    Speichern
+                  </Button>
                 </div>
               </DialogFooter>
             </>

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { User, Users, UserPlus, UserCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { format, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Booking } from "@/lib/types";
@@ -93,6 +94,7 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
   }, [bookings]);
 
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
 
   return (
     <div className="overflow-x-auto" onMouseLeave={() => setHoveredDay(null)}>
@@ -146,7 +148,7 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
                         {dayBookings.map(b => (
                           <div key={b.id} className="flex items-center justify-between gap-2">
                             <span>P{b.court_number}: {b.booker_vorname} {b.booker_nachname} ({typeLabel(b)})</span>
-                            <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => onDelete(b.id)}>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={(e) => { e.stopPropagation(); setDeleteTarget(b); }}>
                               <Trash2 className="h-3 w-3 text-destructive" />
                             </Button>
                           </div>
@@ -160,6 +162,25 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
           </div>
         ))}
       </div>
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buchung löschen</DialogTitle>
+            <DialogDescription>
+              Möchten Sie diese Buchung wirklich löschen?
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget?.recurrence_parent_id && (
+            <p className="text-sm font-bold text-foreground">
+              Hinweis: Dieser Termin gehört zu einer Serie. Änderungen hier betreffen nur diesen Termin. Um die gesamte Serie zu ändern, nutzen Sie bitte die Seite Sonderbuchungen.
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Abbrechen</Button>
+            <Button variant="destructive" onClick={() => { onDelete(deleteTarget!.id); setDeleteTarget(null); }}>Bestätigen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

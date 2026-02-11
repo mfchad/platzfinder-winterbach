@@ -320,7 +320,7 @@ export default function SpecialBookingsTab() {
           {/* Mode selector */}
           <div>
             <Label>Buchungstyp</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+            <Select value={mode} onValueChange={(v) => { setMode(v as any); resetForm(); }}>
               <SelectTrigger className="max-w-xs">
                 <SelectValue />
               </SelectTrigger>

@@ -156,6 +156,21 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
         booking_type: 'full',
       }).eq('id', booking.id);
       if (error) throw error;
+
+      // Trigger email notification to the initial booker (fire-and-forget)
+      try {
+        await supabase.functions.invoke('notify-join', {
+          body: {
+            bookingId: booking.id,
+            partnerVorname: vorname.trim(),
+            partnerNachname: nachname.trim(),
+            partnerComment: comment || null,
+          },
+        });
+      } catch (notifyErr) {
+        console.warn('Join notification failed (non-blocking):', notifyErr);
+      }
+
       toast({ title: "Erfolg", description: "Sie haben sich erfolgreich angemeldet!" });
       onSuccess();
       handleClose();

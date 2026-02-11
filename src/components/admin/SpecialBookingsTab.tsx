@@ -741,40 +741,36 @@ function WeeklyForm({
   toggleInArray: (arr: number[], val: number) => number[];
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
-  // Local range state to control reset behavior independently from parent
-  const [localRange, setLocalRange] = useState<{ from?: Date; to?: Date } | undefined>(
+  const [tempRange, setTempRange] = useState<{ from: Date; to?: Date } | undefined>(
     startDate ? { from: startDate, to: endDate } : undefined
   );
-  const hadCompleteRange = React.useRef(false);
 
   const handleRangeOpen = (open: boolean) => {
     if (open) {
-      // Sync local range from parent state when opening
-      setLocalRange(startDate ? { from: startDate, to: endDate } : undefined);
-      hadCompleteRange.current = !!(startDate && endDate);
+      setTempRange(startDate ? { from: startDate, to: endDate } : undefined);
     }
     setRangeOpen(open);
   };
 
-  const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    // If we had a complete range before and user clicks, start fresh
-    if (hadCompleteRange.current) {
-      // react-day-picker adjusted an endpoint; override to start a fresh selection
-      // The "from" in the new range is the newly clicked date
-      const clickedDate = range?.from;
-      setLocalRange(clickedDate ? { from: clickedDate, to: undefined } : undefined);
-      setStartDate(clickedDate);
+  // Use onDayClick to get the actual clicked date and implement force-restart
+  const handleDayClick = (day: Date) => {
+    if (!tempRange?.from || tempRange.to) {
+      // No range yet OR complete range exists → start fresh with this date as "from"
+      setTempRange({ from: day, to: undefined });
+      setStartDate(day);
       setEndDate(undefined);
-      hadCompleteRange.current = false;
-      return;
-    }
-
-    setLocalRange(range);
-    setStartDate(range?.from);
-    setEndDate(range?.to);
-
-    if (range?.from && range?.to) {
-      hadCompleteRange.current = true;
+    } else {
+      // We have "from" but no "to" → complete the range
+      let from = tempRange.from;
+      let to = day;
+      // Ensure from <= to
+      if (isBefore(to, from)) {
+        [from, to] = [to, from];
+      }
+      const complete = { from, to };
+      setTempRange(complete);
+      setStartDate(from);
+      setEndDate(to);
       setTimeout(() => setRangeOpen(false), 150);
     }
   };
@@ -799,8 +795,8 @@ function WeeklyForm({
           <PopoverContent className="w-auto p-0" align="start">
             <CalendarPicker
               mode="range"
-              selected={localRange?.from ? { from: localRange.from, to: localRange.to } : undefined}
-              onSelect={handleRangeSelect as any}
+              selected={tempRange?.from ? { from: tempRange.from, to: tempRange.to } : undefined}
+              onDayClick={handleDayClick}
               locale={de}
               numberOfMonths={2}
               className="pointer-events-auto"

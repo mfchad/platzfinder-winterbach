@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { User, Users, UserPlus, UserCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -92,17 +92,22 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
     return map;
   }, [bookings]);
 
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" onMouseLeave={() => setHoveredDay(null)}>
       <div className="min-w-[800px]">
         {/* Header */}
         <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: `60px repeat(7, 1fr)` }}>
           <div className="text-xs font-semibold text-muted-foreground p-1" />
-           {days.map(d => (
+           {days.map((d, i) => (
             <div
               key={d.toISOString()}
-              className="text-center text-xs font-display font-semibold p-2 rounded-t-md bg-court-header text-primary-foreground cursor-pointer hover:opacity-80 transition-opacity"
+              className={`text-center text-xs font-display font-semibold p-2 rounded-t-md bg-court-header text-primary-foreground cursor-pointer transition-all ${
+                hoveredDay === i ? "opacity-80 ring-1 ring-primary-foreground/50" : ""
+              }`}
               onClick={() => onDrillDown?.(d)}
+              onMouseEnter={() => setHoveredDay(i)}
             >
               {format(d, "EEE dd.MM", { locale: de })}
             </div>
@@ -114,20 +119,24 @@ function WeekGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, o
             <div className="text-xs font-medium text-muted-foreground p-1 flex items-center">
               {String(hour).padStart(2, "0")}:00
             </div>
-            {days.map(d => {
+            {days.map((d, i) => {
               const dayStr = formatDateISO(d);
               const dayBookings = bookingMap[`${dayStr}-${hour}`] || [];
               const count = dayBookings.length;
+              const isHovered = hoveredDay === i;
               return (
                 <Tooltip key={dayStr}>
                   <TooltipTrigger asChild>
                     <div
-                      className={`border border-border rounded-sm min-h-[2rem] flex items-center justify-center text-xs cursor-pointer transition-colors hover:ring-1 hover:ring-primary ${
-                        count === 0 ? "bg-court-empty hover:bg-muted" :
-                        count >= courtsCount ? "bg-court-full text-primary-foreground hover:opacity-90" :
-                        "bg-court-half hover:opacity-90"
+                      className={`border border-border rounded-sm min-h-[2rem] flex items-center justify-center text-xs cursor-pointer transition-colors ${
+                        count === 0
+                          ? `bg-court-empty ${isHovered ? "bg-muted" : ""}`
+                          : count >= courtsCount
+                          ? `bg-court-full text-primary-foreground ${isHovered ? "opacity-85" : ""}`
+                          : `bg-court-half ${isHovered ? "opacity-85" : ""}`
                       }`}
-                      onClick={() => onDrillDown?.(d)}>
+                      onClick={() => onDrillDown?.(d)}
+                      onMouseEnter={() => setHoveredDay(i)}>
                       {count > 0 ? `${count}/${courtsCount}` : ""}
                     </div>
                   </TooltipTrigger>

@@ -50,7 +50,7 @@ export default function AdminDashboard() {
             </Button>
             <h1 className="font-display text-lg sm:text-xl font-bold">Verwaltung</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
+          <Button size="sm" onClick={handleLogout} className="bg-primary text-primary-foreground hover:bg-primary/80">
             <LogOut className="h-4 w-4 mr-1" /> Abmelden
           </Button>
         </div>

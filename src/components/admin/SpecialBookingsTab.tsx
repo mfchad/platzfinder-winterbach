@@ -242,10 +242,35 @@ export default function SpecialBookingsTab() {
         }
       }
 
-      const { error } = await supabase.from("bookings").insert(bookings);
-      if (error) {
-        toast({ title: "Fehler", description: error.message, variant: "destructive" });
+      // Remove the placeholder recurrence_parent_id — we'll use the first booking's real id
+      const bookingsToInsert = bookings.map(({ recurrence_parent_id, ...rest }) => rest);
+
+      // Insert the first booking to get its ID
+      const [first, ...rest] = bookingsToInsert;
+      const { data: firstData, error: firstErr } = await supabase
+        .from("bookings")
+        .insert(first)
+        .select("id")
+        .single();
+
+      if (firstErr || !firstData) {
+        toast({ title: "Fehler", description: firstErr?.message || "Erste Buchung fehlgeschlagen.", variant: "destructive" });
         return;
+      }
+
+      const parentId = firstData.id;
+
+      // Update the first booking to set its own recurrence_parent_id
+      await supabase.from("bookings").update({ recurrence_parent_id: parentId }).eq("id", parentId);
+
+      // Insert remaining bookings with the real parent ID
+      if (rest.length > 0) {
+        const remaining = rest.map((b) => ({ ...b, recurrence_parent_id: parentId }));
+        const { error } = await supabase.from("bookings").insert(remaining);
+        if (error) {
+          toast({ title: "Fehler", description: error.message, variant: "destructive" });
+          return;
+        }
       }
 
       toast({ title: "Erfolg", description: `${bookings.length} Sonderbuchung(en) erstellt.` });

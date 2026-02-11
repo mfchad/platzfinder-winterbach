@@ -26,10 +26,12 @@ export default function DateNavigation({ date, onDateChange }: DateNavigationPro
   const goToday = () => onDateChange(new Date());
 
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <span className="font-display text-lg sm:text-xl font-semibold text-foreground">
-        {formatGermanDate(date)}
-      </span>
+    <div className="flex items-center justify-center gap-2 sm:gap-3">
+      <div className="min-w-[180px] sm:min-w-[240px] text-center">
+        <span className="font-display text-lg sm:text-xl font-semibold text-foreground">
+          {formatGermanDate(date)}
+        </span>
+      </div>
       <div className="flex items-center gap-1">
         <Button variant="outline" size="icon" onClick={goLeft} className="h-8 w-8">
           <ChevronLeft className="h-4 w-4" />

@@ -26,6 +26,8 @@ export default function AdminBookingsTab() {
   const [loading, setLoading] = useState(false);
 
   const { startDate, endDate, label } = getRange(date, timeScale);
+  const startStr = formatDateISO(startDate);
+  const endStr = formatDateISO(endDate);
 
   const loadRules = useCallback(async () => {
     const r = await fetchRules();
@@ -34,8 +36,6 @@ export default function AdminBookingsTab() {
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
-    const startStr = formatDateISO(startDate);
-    const endStr = formatDateISO(endDate);
     const { data } = await supabase
       .from("bookings")
       .select("*")
@@ -45,7 +45,7 @@ export default function AdminBookingsTab() {
       .order("start_hour");
     setBookings((data as Booking[]) || []);
     setLoading(false);
-  }, [startDate, endDate]);
+  }, [startStr, endStr]);
 
   useEffect(() => { loadRules(); }, [loadRules]);
   useEffect(() => { loadBookings(); }, [loadBookings]);

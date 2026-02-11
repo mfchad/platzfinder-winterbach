@@ -15,6 +15,7 @@ import { ArrowLeft, LogOut, Trash2, Edit, Plus, Upload } from "lucide-react";
 import type { Member, Booking, BookingRule } from "@/lib/types";
 import DateNavigation from "@/components/DateNavigation";
 import { formatDateISO, anonymizeName } from "@/lib/types";
+import AdminBookingsTab from "@/components/admin/AdminBookingsTab";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="members"><MembersTab /></TabsContent>
-          <TabsContent value="bookings"><BookingsTab /></TabsContent>
+          <TabsContent value="bookings"><AdminBookingsTab /></TabsContent>
           <TabsContent value="special"><SpecialBookingsTab /></TabsContent>
           <TabsContent value="rules"><RulesTab /></TabsContent>
         </Tabs>
@@ -211,77 +212,7 @@ function MembersTab() {
   );
 }
 
-// ===== Bookings Tab =====
-function BookingsTab() {
-  const [date, setDate] = useState(new Date());
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const dateStr = formatDateISO(date);
-
-  const load = useCallback(async () => {
-    const { data } = await supabase.from('bookings').select('*').eq('date', dateStr).order('start_hour');
-    setBookings((data as Booking[]) || []);
-  }, [dateStr]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const deleteBooking = async (id: string) => {
-    await supabase.from('bookings').delete().eq('id', id);
-    load();
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-display">Buchungen verwalten</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <DateNavigation date={date} onDateChange={setDate} />
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Platz</TableHead>
-                <TableHead>Zeit</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Bucher</TableHead>
-                <TableHead>Partner</TableHead>
-                <TableHead>Kommentar</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bookings.map(b => (
-                <TableRow key={b.id} className={b.booking_type === 'double' ? 'bg-wimbledon-gold/10' : ''}>
-                  <TableCell>Platz {b.court_number}</TableCell>
-                  <TableCell>{String(b.start_hour).padStart(2, '0')}:00</TableCell>
-                  <TableCell>
-                    {b.booking_type === 'special' ? b.special_label :
-                     b.booking_type === 'half' ? (b.is_joined ? 'Halb → Voll' : 'Halbbuchung') :
-                     b.booking_type === 'double' ? '🎾 Doppel' : 'Einzel'}
-                  </TableCell>
-                  <TableCell>{b.booker_vorname} {b.booker_nachname}</TableCell>
-                  <TableCell>
-                    {b.partner_vorname ? `${b.partner_vorname} ${b.partner_nachname}` : 
-                     b.double_match_names || '-'}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate">{b.booker_comment || b.partner_comment || '-'}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => deleteBooking(b.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {bookings.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Keine Buchungen für diesen Tag.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// BookingsTab moved to src/components/admin/AdminBookingsTab.tsx
 
 // ===== Special Bookings Tab =====
 function SpecialBookingsTab() {

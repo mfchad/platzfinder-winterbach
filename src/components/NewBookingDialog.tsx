@@ -35,6 +35,10 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
   const withinWindow = isWithinBookingWindow(date, hour, rules);
   const coreTime = isCoreTime(date, hour, rules);
 
+  // Determine if the slot is bookable based on the selected type:
+  // Half-bookings bypass the global booking window and use their own time window.
+  const isSlotBookable = bookingType === 'half' ? halfAllowed : withinWindow;
+
   const handleSubmit = async () => {
     if (!vorname.trim() || !nachname.trim() || !geburtsjahr.trim()) {
       toast({ title: "Fehler", description: "Bitte alle Felder ausfüllen.", variant: "destructive" });
@@ -56,18 +60,20 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
         return;
       }
 
-      // Check booking window
-      if (!withinWindow) {
-        toast({ title: "Fehler", description: "Buchungen sind nur innerhalb der nächsten 24 Stunden möglich.", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-
-      // Check half booking time window
-      if (bookingType === 'half' && !halfAllowed) {
-        toast({ title: "Fehler", description: "Halbbuchungen sind nur zwischen 24h und 12h vor Spielbeginn möglich.", variant: "destructive" });
-        setLoading(false);
-        return;
+      // For half-bookings, only check half_booking time window (bypass global booking_window_hours).
+      // For other types, check the global booking window.
+      if (bookingType === 'half') {
+        if (!halfAllowed) {
+          toast({ title: "Fehler", description: "Halbbuchungen sind nur im definierten Zeitfenster möglich.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+      } else {
+        if (!withinWindow) {
+          toast({ title: "Fehler", description: "Buchungen sind nur innerhalb des Buchungsvorlaufs möglich.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
       }
 
       // Check core time limits
@@ -134,9 +140,11 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
           </DialogTitle>
         </DialogHeader>
 
-        {!withinWindow && (
+        {!isSlotBookable && (
           <p className="text-sm text-destructive">
-            Buchungen sind nur innerhalb der nächsten 24 Stunden möglich.
+            {bookingType === 'half'
+              ? "Halbbuchungen sind in diesem Zeitfenster nicht möglich."
+              : "Buchungen sind nur innerhalb des Buchungsvorlaufs möglich."}
           </p>
         )}
 
@@ -221,7 +229,7 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
             </div>
           )}
 
-          <Button onClick={handleSubmit} disabled={loading || !withinWindow} className="w-full">
+          <Button onClick={handleSubmit} disabled={loading || !isSlotBookable} className="w-full">
             {loading ? "Wird gebucht..." : "Buchen"}
           </Button>
         </div>

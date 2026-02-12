@@ -28,6 +28,7 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
   const [bookingType, setBookingType] = useState<"full" | "half" | "double">("full");
   const [comment, setComment] = useState("");
   const [doubleNames, setDoubleNames] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -99,21 +100,23 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
         return;
       }
 
-      const { error } = await supabase.from('bookings').insert({
-        court_number: court,
-        date,
-        start_hour: hour,
-        booking_type: bookingType,
-        booker_vorname: vorname.trim(),
-        booker_nachname: nachname.trim(),
-        booker_geburtsjahr: gj,
-        booker_comment: bookingType === 'half' ? comment : undefined,
-        double_match_names: bookingType === 'double' ? doubleNames : undefined,
-        is_joined: false,
-        created_by_admin: false,
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('create-booking', {
+        body: {
+          court_number: court,
+          date,
+          start_hour: hour,
+          booking_type: bookingType,
+          booker_vorname: vorname.trim(),
+          booker_nachname: nachname.trim(),
+          booker_geburtsjahr: gj,
+          booker_comment: bookingType === 'half' ? comment : undefined,
+          double_match_names: bookingType === 'double' ? doubleNames : undefined,
+          website: honeypot,
+        },
       });
 
-      if (error) throw error;
+      if (fnError) throw fnError;
+      if (fnData?.error) throw new Error(fnData.error);
 
       toast({ title: "Erfolg", description: "Buchung wurde erstellt!" });
       onSuccess();
@@ -128,7 +131,7 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
 
   const resetForm = () => {
     setVorname(""); setNachname(""); setGeburtsjahr("");
-    setBookingType("full"); setComment(""); setDoubleNames("");
+    setBookingType("full"); setComment(""); setDoubleNames(""); setHoneypot("");
   };
 
   return (
@@ -228,6 +231,20 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
               />
             </div>
           )}
+
+          {/* Honeypot field - invisible to humans, catches bots */}
+          <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
+            <label htmlFor="website">Website</label>
+            <input
+              id="website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={honeypot}
+              onChange={e => setHoneypot(e.target.value)}
+            />
+          </div>
 
           <Button onClick={handleSubmit} disabled={loading || !isSlotBookable} className="w-full">
             {loading ? "Wird gebucht..." : "Buchen"}

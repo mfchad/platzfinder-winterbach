@@ -49,6 +49,7 @@ export type Database = {
           court_number: number
           created_at: string
           created_by_admin: boolean
+          created_by_ip: string | null
           date: string
           double_match_names: string | null
           id: string
@@ -73,6 +74,7 @@ export type Database = {
           court_number: number
           created_at?: string
           created_by_admin?: boolean
+          created_by_ip?: string | null
           date: string
           double_match_names?: string | null
           id?: string
@@ -97,6 +99,7 @@ export type Database = {
           court_number?: number
           created_at?: string
           created_by_admin?: boolean
+          created_by_ip?: string | null
           date?: string
           double_match_names?: string | null
           id?: string

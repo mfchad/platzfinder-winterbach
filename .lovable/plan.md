@@ -1,74 +1,50 @@
 
 
-# Root Cause Analysis: Google Auth 404 on `/auth/v1/callback`
+# Redirect Authenticated Users to Admin Dashboard After Google Login
 
-## The Core Finding
+## Problem
 
-Your code in `AdminLogin.tsx` is correct -- it sets `redirectTo` to `window.location.origin + '/callback'`. However, **this is not what controls where the browser lands after Google login.**
+After the OAuth redirect change, users land on `/` (the root/Index page) after Google login. The `onAuthStateChange` listener that navigates to `/admin/dashboard` only exists in `AdminLogin.tsx`, which is mounted at `/admin`. Since the user is no longer on that page, the redirect never fires.
 
-## How Supabase OAuth Actually Works
+## Solution
 
-Here is the critical flow that explains the disconnect:
+Add an auth session check in `App.tsx` at the router level. When the app detects a session from an OAuth callback (indicated by an access token in the URL hash), it redirects to `/admin/dashboard`.
 
-1. Your code calls `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: "https://platzfinder-winterbach.vercel.app/callback" } })`
-2. The Supabase SDK redirects the browser to **Google's consent screen**
-3. After the user approves, Google redirects to **Supabase's own callback endpoint**: `https://rvdlyufaeljvmnboucmr.supabase.co/auth/v1/callback`
-4. Supabase processes the tokens, then redirects the user to **your `redirectTo` URL** -- but it appends the tokens as a hash fragment
+## Changes
 
-The `redirectTo` parameter tells Supabase where to send the user **after Supabase finishes processing**. It does NOT change the intermediate callback URL that Google uses.
+### 1. `src/App.tsx` -- Add a root-level auth redirect component
 
-## Why You See `/auth/v1/callback` in Your Bundle
+Create a small wrapper component inside `App.tsx` (or a separate file) that:
+- Listens for `onAuthStateChange` events
+- On `SIGNED_IN` event, checks if the current URL contains an access token hash fragment (indicating an OAuth callback)
+- If so, navigates to `/admin/dashboard`
 
-The string `auth/v1/callback` is **hardcoded inside the `@supabase/supabase-js` SDK itself**. It's the path Supabase uses on its own server (`rvdlyufaeljvmnboucmr.supabase.co/auth/v1/callback`) to receive the OAuth code from Google. This is expected and correct -- it is NOT a path on your Vercel domain.
+```typescript
+function AuthRedirectHandler() {
+  const navigate = useNavigate();
 
-## The Real Problem
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session && window.location.hash.includes('access_token')) {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
-If the browser is landing on `https://platzfinder-winterbach.vercel.app/auth/v1/callback`, it means **Supabase is redirecting to the wrong final URL**. This happens when:
-
-- The **Site URL** in the Supabase/Lovable Cloud auth settings is set to `https://platzfinder-winterbach.vercel.app` AND
-- The `redirectTo` parameter is either not reaching Supabase correctly, OR Supabase is falling back to appending `/auth/v1/callback` to the Site URL instead of using your `redirectTo`
-
-This is a **backend configuration issue**, not a frontend code issue. Your code is already correct.
-
-## The Fix (2 Steps)
-
-### Step 1: Simplify the redirectTo (code change)
-
-Change the `redirectTo` to just `window.location.origin` (no path). After Supabase processes the OAuth tokens, it will redirect the user to your app's root URL with the session tokens in the URL hash. The `onAuthStateChange` listener in `AdminLogin.tsx` will automatically detect the new session and navigate to `/admin/dashboard`.
-
-In `src/pages/AdminLogin.tsx`, line 44:
-```
-// Change from:
-redirectTo: window.location.origin + '/callback',
-// Change to:
-redirectTo: window.location.origin,
+  return null;
+}
 ```
 
-### Step 2: Verify backend auth settings
+Place `<AuthRedirectHandler />` inside the `<BrowserRouter>` in `App.tsx` so it has access to the router context and runs on every page.
 
-In the Lovable Cloud dashboard (Users > Auth Settings), confirm:
-- **Site URL** is set to `https://platzfinder-winterbach.vercel.app`
-- **Redirect URLs whitelist** includes `https://platzfinder-winterbach.vercel.app/**`
+### 2. No other files need changes
 
-### Why This Works
+The existing listener in `AdminLogin.tsx` can stay as-is -- it serves as a secondary check if someone navigates directly to `/admin` while already logged in.
 
-- The user lands on `https://platzfinder-winterbach.vercel.app/#access_token=...` (your root URL)
-- React Router matches the `/` route and renders the `Index` page
-- The Supabase client automatically picks up the access token from the URL hash
-- The `onAuthStateChange` listener in `AdminLogin` (or wherever the user navigates to `/admin`) detects the session and redirects to `/admin/dashboard`
+## Technical Details
 
-### Optional Cleanup
-
-The `/callback` route and `AuthCallback.tsx` component can be kept as a fallback, but they are no longer strictly needed with this approach.
-
-## Summary
-
-| Aspect | Current State | Root Cause |
-|---|---|---|
-| Code (`redirectTo`) | Points to `/callback` | Correct but unnecessary path |
-| Route in App.tsx | `/callback` defined | Never reached because Supabase redirects to `/auth/v1/callback` instead |
-| `/auth/v1/callback` string in bundle | From Supabase SDK internals | Expected, refers to Supabase server, not your domain |
-| Actual browser redirect | Lands on `/auth/v1/callback` on your domain | Backend Site URL config causing Supabase to construct wrong redirect |
-
-The fix is: set `redirectTo` to just `window.location.origin` and let the existing auth state listener handle navigation.
+- The `event === 'SIGNED_IN'` check ensures we only redirect on fresh logins, not on page refreshes with an existing session.
+- The `window.location.hash.includes('access_token')` check ensures we only redirect when coming from an OAuth callback, not on normal session restoration.
+- `{ replace: true }` prevents the OAuth callback URL from staying in browser history.
 

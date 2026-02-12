@@ -41,7 +41,7 @@ export default function AdminLogin() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "https://platzfinder-winterbach.vercel.app",
+          redirectTo: "https://platzfinder-winterbach.vercel.app/auth/v1/callback",
         },
       });
       if (error) throw error;

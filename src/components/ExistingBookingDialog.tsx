@@ -102,8 +102,16 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('bookings').delete().eq('id', booking.id);
+      const { data, error } = await supabase.functions.invoke('cancel-booking', {
+        body: {
+          bookingId: booking.id,
+          vorname: vorname.trim(),
+          nachname: nachname.trim(),
+          geburtsjahr: parseInt(geburtsjahr, 10),
+        },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast({ title: "Erfolg", description: "Buchung wurde storniert." });
       onSuccess();
       handleClose();

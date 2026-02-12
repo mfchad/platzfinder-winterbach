@@ -3,13 +3,16 @@ import { getRuleNum, getRule } from "./booking-rules";
 import type { Booking } from "./types";
 
 export async function verifyMember(vorname: string, nachname: string, geburtsjahr: number): Promise<boolean> {
-  const { data } = await supabase
-    .from('members')
-    .select('id')
-    .ilike('vorname', vorname.trim())
-    .ilike('nachname', nachname.trim())
-    .eq('geburtsjahr', geburtsjahr);
-  return (data && data.length > 0) || false;
+  const { data, error } = await supabase.rpc('verify_member', {
+    _vorname: vorname,
+    _nachname: nachname,
+    _geburtsjahr: geburtsjahr,
+  });
+  if (error) {
+    console.error('verify_member error:', error);
+    return false;
+  }
+  return data === true;
 }
 
 export function isWithinBookingWindow(date: string, hour: number, rules: Record<string, string>): boolean {

@@ -122,6 +122,13 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookings_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "bookings_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       members: {
@@ -171,7 +178,93 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      bookings_public: {
+        Row: {
+          booker_comment: string | null
+          booker_geburtsjahr: number | null
+          booker_nachname: string | null
+          booker_vorname: string | null
+          booking_type: string | null
+          court_number: number | null
+          created_at: string | null
+          created_by_admin: boolean | null
+          date: string | null
+          double_match_names: string | null
+          id: string | null
+          is_joined: boolean | null
+          partner_comment: string | null
+          partner_geburtsjahr: number | null
+          partner_nachname: string | null
+          partner_vorname: string | null
+          recurrence_end_date: string | null
+          recurrence_parent_id: string | null
+          recurrence_type: string | null
+          special_label: string | null
+          start_hour: number | null
+        }
+        Insert: {
+          booker_comment?: string | null
+          booker_geburtsjahr?: number | null
+          booker_nachname?: string | null
+          booker_vorname?: string | null
+          booking_type?: string | null
+          court_number?: number | null
+          created_at?: string | null
+          created_by_admin?: boolean | null
+          date?: string | null
+          double_match_names?: string | null
+          id?: string | null
+          is_joined?: boolean | null
+          partner_comment?: string | null
+          partner_geburtsjahr?: number | null
+          partner_nachname?: string | null
+          partner_vorname?: string | null
+          recurrence_end_date?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_type?: string | null
+          special_label?: string | null
+          start_hour?: number | null
+        }
+        Update: {
+          booker_comment?: string | null
+          booker_geburtsjahr?: number | null
+          booker_nachname?: string | null
+          booker_vorname?: string | null
+          booking_type?: string | null
+          court_number?: number | null
+          created_at?: string | null
+          created_by_admin?: boolean | null
+          date?: string | null
+          double_match_names?: string | null
+          id?: string | null
+          is_joined?: boolean | null
+          partner_comment?: string | null
+          partner_geburtsjahr?: number | null
+          partner_nachname?: string | null
+          partner_vorname?: string | null
+          recurrence_end_date?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_type?: string | null
+          special_label?: string | null
+          start_hour?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "bookings_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {

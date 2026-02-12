@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/pagination";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Upload, Save, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Upload, Save, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import * as XLSX from "xlsx";
 import type { Member } from "@/lib/types";
 
 const PAGE_SIZE = 50;
@@ -41,6 +42,9 @@ export default function MembersTab() {
   const [search, setSearch] = useState("");
   const [showBulk, setShowBulk] = useState(false);
   const [bulkText, setBulkText] = useState("");
+  const [bulkParsedRows, setBulkParsedRows] = useState<Array<{ vorname: string; nachname: string; geburtsjahr: number; email: string | null }>>([]);
+  const [bulkSheetCount, setBulkSheetCount] = useState(0);
+  const [bulkFileName, setBulkFileName] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
   const [dirtyRows, setDirtyRows] = useState<Record<string, EditableMember>>({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -77,26 +81,78 @@ export default function MembersTab() {
     load();
   };
 
-  const handleBulkUpload = async () => {
+  const HEADER_MAP: Record<string, keyof typeof FIELD_KEYS> = {
+    vorname: "vorname", "first name": "vorname", "firstname": "vorname",
+    nachname: "nachname", "last name": "nachname", "lastname": "nachname",
+    "e-mail": "email", email: "email", mail: "email",
+    geburtsjahr: "geburtsjahr", year: "geburtsjahr", "birth year": "geburtsjahr", jahrgang: "geburtsjahr",
+  };
+  const FIELD_KEYS = { vorname: true, nachname: true, geburtsjahr: true, email: true } as const;
+
+  const parseSheetData = (sheet: XLSX.WorkSheet) => {
+    const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+    if (json.length === 0) return [];
+
+    const headers = Object.keys(json[0]);
+    const colMap: Record<string, string> = {};
+    for (const h of headers) {
+      const normalized = h.toLowerCase().trim();
+      if (HEADER_MAP[normalized]) colMap[HEADER_MAP[normalized]] = h;
+    }
+
+    if (!colMap.vorname || !colMap.nachname) {
+      toast({ title: "Fehler", description: "Spalten 'Vorname' und 'Nachname' nicht gefunden.", variant: "destructive" });
+      return [];
+    }
+
+    return json.map(row => ({
+      vorname: String(row[colMap.vorname] || "").trim(),
+      nachname: String(row[colMap.nachname] || "").trim(),
+      geburtsjahr: parseInt(String(row[colMap.geburtsjahr] || "0")) || 0,
+      email: colMap.email ? (String(row[colMap.email] || "").trim() || null) : null,
+    })).filter(r => r.vorname && r.nachname);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      setBulkSheetCount(workbook.SheetNames.length);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = parseSheetData(sheet);
+      setBulkParsedRows(rows);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleBulkCsvParse = () => {
     const lines = bulkText.trim().split("\n").filter(l => l.trim());
-    const toInsert: any[] = [];
+    const rows: typeof bulkParsedRows = [];
     for (const line of lines) {
       const parts = line.split(/[,;\t]/).map(p => p.trim());
-      if (parts.length >= 3) {
-        toInsert.push({
+      if (parts.length >= 2) {
+        rows.push({
           vorname: parts[0], nachname: parts[1],
-          geburtsjahr: parseInt(parts[2]), email: parts[3] || null,
+          geburtsjahr: parseInt(parts[2]) || 0, email: parts[3] || null,
         });
       }
     }
-    if (toInsert.length === 0) {
+    setBulkParsedRows(rows);
+  };
+
+  const handleBulkImport = async () => {
+    if (bulkParsedRows.length === 0) {
       toast({ title: "Fehler", description: "Keine gültigen Daten gefunden.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("members").insert(toInsert);
+    const { error } = await supabase.from("members").insert(bulkParsedRows);
     if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Erfolg", description: `${toInsert.length} Mitglieder importiert.` });
-    setBulkText(""); setShowBulk(false);
+    toast({ title: "Erfolg", description: `${bulkParsedRows.length} Mitglieder importiert.` });
+    setBulkText(""); setBulkParsedRows([]); setBulkFileName(""); setShowBulk(false);
     load();
   };
 
@@ -444,15 +500,74 @@ export default function MembersTab() {
         </Dialog>
 
         {/* Bulk upload dialog */}
-        <Dialog open={showBulk} onOpenChange={setShowBulk}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="font-display">Mitglieder Bulk Upload</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              CSV-Daten einfügen: Vorname, Nachname, Geburtsjahr, E-Mail (optional). Trennzeichen: Komma, Semikolon oder Tab.
-            </p>
-            <Textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={8}
-              placeholder="Max,Mustermann,1984,max@email.de&#10;Anna,Schmidt,1990,anna@email.de" />
-            <Button onClick={handleBulkUpload}>Importieren</Button>
+        <Dialog open={showBulk} onOpenChange={(open) => {
+          setShowBulk(open);
+          if (!open) { setBulkParsedRows([]); setBulkText(""); setBulkFileName(""); setBulkSheetCount(0); }
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><FileSpreadsheet className="h-5 w-5" /> Mitglieder Import</DialogTitle></DialogHeader>
+
+            {/* File upload */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Excel- oder CSV-Datei hochladen</Label>
+              <Input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileSelect}
+                className="cursor-pointer"
+              />
+              {bulkSheetCount > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  ℹ️ Die Datei enthält {bulkSheetCount} Blätter – es wird nur das erste Blatt importiert.
+                </p>
+              )}
+            </div>
+
+            {/* CSV text fallback */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Oder CSV-Daten einfügen</Label>
+              <Textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={4}
+                placeholder="Max,Mustermann,1984,max@email.de&#10;Anna,Schmidt,1990" />
+              {bulkText.trim() && bulkParsedRows.length === 0 && (
+                <Button size="sm" variant="outline" onClick={handleBulkCsvParse}>Vorschau laden</Button>
+              )}
+            </div>
+
+            {/* Preview */}
+            {bulkParsedRows.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Vorschau ({bulkParsedRows.length} Einträge gefunden)</Label>
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs py-1 px-2">Vorname</TableHead>
+                        <TableHead className="text-xs py-1 px-2">Nachname</TableHead>
+                        <TableHead className="text-xs py-1 px-2">Jahr</TableHead>
+                        <TableHead className="text-xs py-1 px-2">E-Mail</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bulkParsedRows.slice(0, 3).map((r, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-xs py-1 px-2">{r.vorname}</TableCell>
+                          <TableCell className="text-xs py-1 px-2">{r.nachname}</TableCell>
+                          <TableCell className="text-xs py-1 px-2">{r.geburtsjahr || "-"}</TableCell>
+                          <TableCell className="text-xs py-1 px-2">{r.email || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {bulkParsedRows.length > 3 && (
+                  <p className="text-xs text-muted-foreground">… und {bulkParsedRows.length - 3} weitere</p>
+                )}
+              </div>
+            )}
+
+            <Button onClick={handleBulkImport} disabled={bulkParsedRows.length === 0}>
+              {bulkParsedRows.length > 0 ? `${bulkParsedRows.length} Mitglieder importieren` : "Importieren"}
+            </Button>
           </DialogContent>
         </Dialog>
       </CardContent>

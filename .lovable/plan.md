@@ -1,50 +1,50 @@
 
 
-# Redirect Authenticated Users to Admin Dashboard After Google Login
+# Fix Join and Edit Operations for Public Users
 
 ## Problem
 
-After the OAuth redirect change, users land on `/` (the root/Index page) after Google login. The `onAuthStateChange` listener that navigates to `/admin/dashboard` only exists in `AdminLogin.tsx`, which is mounted at `/admin`. Since the user is no longer on that page, the redirect never fires.
+The same silent RLS failure that affected cancellation also affects two other operations on half-bookings:
+
+1. **Join** (`handleJoin`): Calls `supabase.from('bookings').update(...)` to mark a half-booking as joined with partner details
+2. **Edit** (`handleSaveEdit`): Calls `supabase.from('bookings').update(...)` to update the booker's comment
+
+Both silently fail for unauthenticated users because the `bookings` table only allows admin updates via RLS.
 
 ## Solution
 
-Add an auth session check in `App.tsx` at the router level. When the app detects a session from an OAuth callback (indicated by an access token in the URL hash), it redirects to `/admin/dashboard`.
+Create two new edge functions that use the `service_role` key to bypass RLS, with server-side identity verification.
 
-## Changes
+### 1. New Edge Function: `join-booking`
 
-### 1. `src/App.tsx` -- Add a root-level auth redirect component
+**File:** `supabase/functions/join-booking/index.ts`
 
-Create a small wrapper component inside `App.tsx` (or a separate file) that:
-- Listens for `onAuthStateChange` events
-- On `SIGNED_IN` event, checks if the current URL contains an access token hash fragment (indicating an OAuth callback)
-- If so, navigates to `/admin/dashboard`
+- Accepts: `bookingId`, `vorname`, `nachname`, `geburtsjahr`, `comment` (optional)
+- Verifies the joiner is a valid member (via `verify_member` RPC)
+- Verifies the booking exists, is a half-booking, and is not already joined
+- Prevents the booker from joining their own booking
+- Updates the booking with partner details and sets `is_joined = true`, `booking_type = 'full'`
 
-```typescript
-function AuthRedirectHandler() {
-  const navigate = useNavigate();
+### 2. New Edge Function: `update-booking`
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session && window.location.hash.includes('access_token')) {
-        navigate('/admin/dashboard', { replace: true });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+**File:** `supabase/functions/update-booking/index.ts`
 
-  return null;
-}
-```
+- Accepts: `bookingId`, `vorname`, `nachname`, `geburtsjahr`, `bookerComment`
+- Verifies the caller's identity matches the booker
+- Updates only the `booker_comment` field
 
-Place `<AuthRedirectHandler />` inside the `<BrowserRouter>` in `App.tsx` so it has access to the router context and runs on every page.
+### 3. Frontend Changes: `src/components/ExistingBookingDialog.tsx`
 
-### 2. No other files need changes
+- **`handleJoin`**: Replace the direct `supabase.from('bookings').update(...)` with `supabase.functions.invoke('join-booking', { body: { ... } })`. Remove the client-side `verifyMember` call since the edge function handles it server-side.
+- **`handleSaveEdit`**: Replace the direct `supabase.from('bookings').update(...)` with `supabase.functions.invoke('update-booking', { body: { ... } })`.
 
-The existing listener in `AdminLogin.tsx` can stay as-is -- it serves as a secondary check if someone navigates directly to `/admin` while already logged in.
+### 4. Config: `supabase/config.toml`
+
+Add entries for both new functions with `verify_jwt = false`.
 
 ## Technical Details
 
-- The `event === 'SIGNED_IN'` check ensures we only redirect on fresh logins, not on page refreshes with an existing session.
-- The `window.location.hash.includes('access_token')` check ensures we only redirect when coming from an OAuth callback, not on normal session restoration.
-- `{ replace: true }` prevents the OAuth callback URL from staying in browser history.
+- Both edge functions follow the same pattern as the existing `cancel-booking` function: CORS headers, input validation, identity verification, and `service_role` client
+- The `join-booking` function calls the existing `verify_member` RPC to validate membership server-side, which is more secure than the current client-side check
+- The existing `notify-join` call in the frontend stays as-is (it's already an edge function call and works fine)
 

@@ -3,5 +3,8 @@ project_id = "rvdlyufaeljvmnboucmr"
 [functions.cleanup-half-bookings]
 verify_jwt = false
 
+[functions.create-booking]
+verify_jwt = false
+
 [functions.notify-join]
 verify_jwt = false

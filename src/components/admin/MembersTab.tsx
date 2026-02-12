@@ -48,6 +48,7 @@ export default function MembersTab() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [dirtyRows, setDirtyRows] = useState<Record<string, EditableMember>>({});
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [pendingDeletions, setPendingDeletions] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingSearch, setPendingSearch] = useState("");
   const [showSearchWarning, setShowSearchWarning] = useState(false);
@@ -191,9 +192,19 @@ export default function MembersTab() {
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const hasDirty = Object.keys(dirtyRows).length > 0;
+  const hasPendingDeletions = pendingDeletions.size > 0;
+  const hasUnsavedChanges = hasDirty || hasPendingDeletions;
+
+  const togglePendingDeletion = (id: string) => {
+    setPendingDeletions(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleSearchChange = (value: string) => {
-    if (hasDirty) {
+    if (hasUnsavedChanges) {
       setPendingSearch(value);
       setShowSearchWarning(true);
     } else {
@@ -203,6 +214,7 @@ export default function MembersTab() {
 
   const confirmSearchWithDirty = () => {
     setDirtyRows({});
+    setPendingDeletions(new Set());
     setSearch(pendingSearch);
     setShowSearchWarning(false);
   };
@@ -262,9 +274,10 @@ export default function MembersTab() {
   };
 
   const saveChanges = async () => {
-    const ids = Object.keys(dirtyRows);
     let errorCount = 0;
-    for (const id of ids) {
+    // 1. Update dirty rows (excluding pending deletions)
+    const updateIds = Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id));
+    for (const id of updateIds) {
       const row = dirtyRows[id];
       const { error } = await supabase.from("members").update({
         vorname: row.vorname,
@@ -274,23 +287,33 @@ export default function MembersTab() {
       }).eq("id", id);
       if (error) errorCount++;
     }
+    // 2. Delete pending deletions
+    const deleteIds = Array.from(pendingDeletions);
+    for (const id of deleteIds) {
+      const { error } = await supabase.from("members").delete().eq("id", id);
+      if (error) errorCount++;
+    }
     if (errorCount > 0) {
-      toast({ title: "Fehler", description: `${errorCount} Zeile(n) konnten nicht gespeichert werden.`, variant: "destructive" });
+      toast({ title: "Fehler", description: `${errorCount} Vorgang/Vorgänge fehlgeschlagen.`, variant: "destructive" });
     } else {
-      toast({ title: "Erfolg", description: `${ids.length} Mitglied(er) aktualisiert.` });
+      const parts: string[] = [];
+      if (updateIds.length > 0) parts.push(`${updateIds.length} aktualisiert`);
+      if (deleteIds.length > 0) parts.push(`${deleteIds.length} gelöscht`);
+      toast({ title: "Erfolg", description: parts.join(", ") + "." });
     }
     setDirtyRows({});
+    setPendingDeletions(new Set());
     setShowSaveConfirm(false);
     load();
   };
 
   const handleEditModeToggle = (checked: boolean) => {
-    if (!checked && hasDirty) {
+    if (!checked && hasUnsavedChanges) {
       setShowSaveConfirm(true);
       return;
     }
     setIsEditMode(checked);
-    if (!checked) setDirtyRows({});
+    if (!checked) { setDirtyRows({}); setPendingDeletions(new Set()); }
   };
 
   const paginationPages = useMemo(() => {
@@ -350,11 +373,14 @@ export default function MembersTab() {
         )}
 
         {/* Save button */}
-        {hasDirty && (
+        {hasUnsavedChanges && (
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={() => setShowSaveConfirm(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Save className="h-4 w-4 mr-1" />
-              Änderungen speichern ({Object.keys(dirtyRows).length})
+              Änderungen speichern
+              {hasDirty && !hasPendingDeletions && ` (${Object.keys(dirtyRows).length})`}
+              {!hasDirty && hasPendingDeletions && ` (${pendingDeletions.size} Löschungen)`}
+              {hasDirty && hasPendingDeletions && ` (${Object.keys(dirtyRows).length} + ${pendingDeletions.size} Löschungen)`}
             </Button>
           </div>
         )}
@@ -404,14 +430,14 @@ export default function MembersTab() {
             <TableBody>
               {paginatedMembers.map((m, rowIndex) => {
                 const isDirty = !!dirtyRows[m.id];
+                const isMarkedForDeletion = pendingDeletions.has(m.id);
                 return (
                   <TableRow
                     key={m.id}
-                    className={
-                      isDirty
-                        ? "border-l-2 border-l-blue-500"
-                        : ""
-                    }
+                    className={`
+                      ${isDirty && !isMarkedForDeletion ? "border-l-2 border-l-blue-500" : ""}
+                      ${isMarkedForDeletion ? "border-l-2 border-l-destructive opacity-50" : ""}
+                    `}
                   >
                     {(["vorname", "nachname", "geburtsjahr", "email"] as const).map((field, colIdx) => {
                       const isSticky = field === "vorname" || field === "nachname";
@@ -423,7 +449,7 @@ export default function MembersTab() {
 
                       return (
                         <TableCell key={field} className={`${stickyClass}`}>
-                          {isEditMode ? (
+                          {isEditMode && !isMarkedForDeletion ? (
                             <Input
                               ref={(el) => { inputRefs.current[`${m.id}-${field}`] = el; }}
                               type={field === "email" ? "email" : field === "geburtsjahr" ? "number" : "text"}
@@ -433,15 +459,27 @@ export default function MembersTab() {
                               className="h-8 text-sm border-transparent hover:border-muted-foreground/30 focus:border-ring focus:ring-1 focus:ring-ring bg-transparent transition-colors"
                             />
                           ) : (
-                            <span>{field === "email" ? (m[field] || "-") : m[field]}</span>
+                            <span className={isMarkedForDeletion ? "line-through text-muted-foreground" : ""}>
+                              {field === "email" ? (m[field] || "-") : m[field]}
+                            </span>
                           )}
                         </TableCell>
                       );
                     })}
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => deleteMember(m.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {isEditMode ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => togglePendingDeletion(m.id)}
+                          title={isMarkedForDeletion ? "Löschung rückgängig machen" : "Zum Löschen vormerken"}
+                        >
+                          <Trash2 className={`h-4 w-4 ${isMarkedForDeletion ? "text-muted-foreground" : "text-destructive"}`} />
+                        </Button>
+                      ) : null}
+                      {isMarkedForDeletion && (
+                        <Badge variant="destructive" className="text-[10px] px-1 py-0 ml-1">Storniert</Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -489,12 +527,20 @@ export default function MembersTab() {
         <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
           <DialogContent>
             <DialogHeader><DialogTitle className="font-display">Änderungen speichern</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Möchten Sie die Änderungen für {Object.keys(dirtyRows).length} Mitglied(er) dauerhaft speichern?
-            </p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              {Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id)).length > 0 && (
+                <p>📝 {Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id)).length} Änderung(en) speichern</p>
+              )}
+              {pendingDeletions.size > 0 && (
+                <p className="text-destructive font-medium">🗑️ {pendingDeletions.size} Mitglied(er) dauerhaft löschen</p>
+              )}
+              <p className="mt-2">Möchten Sie fortfahren?</p>
+            </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>Abbrechen</Button>
-              <Button onClick={saveChanges}>Speichern</Button>
+              <Button variant={hasPendingDeletions ? "destructive" : "default"} onClick={saveChanges}>
+                {hasPendingDeletions ? "Speichern & Löschen" : "Speichern"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

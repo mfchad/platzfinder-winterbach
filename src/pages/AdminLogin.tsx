@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
-import { lovable } from "@/integrations/lovable/index";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -39,8 +38,11 @@ export default function AdminLogin() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "https://platzfinder-winterbach.vercel.app",
+        },
       });
       if (error) throw error;
     } catch (e: any) {

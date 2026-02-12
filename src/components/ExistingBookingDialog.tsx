@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { verifyMember } from "@/lib/booking-validation";
+
 import { useToast } from "@/hooks/use-toast";
 import type { Booking } from "@/lib/types";
 
@@ -129,10 +129,17 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
   const handleSaveEdit = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('bookings').update({
-        booker_comment: editComment,
-      }).eq('id', booking.id);
+      const { data, error } = await supabase.functions.invoke('update-booking', {
+        body: {
+          bookingId: booking.id,
+          vorname: vorname.trim(),
+          nachname: nachname.trim(),
+          geburtsjahr: parseInt(geburtsjahr, 10),
+          bookerComment: editComment,
+        },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast({ title: "Erfolg", description: "Buchung wurde aktualisiert." });
       onSuccess();
       handleClose();
@@ -148,22 +155,18 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
       return;
     }
     setLoading(true);
-    const isMember = await verifyMember(vorname, nachname, gj);
-    if (!isMember) {
-      toast({ title: "Fehler", description: "Mitglied nicht gefunden.", variant: "destructive" });
-      setLoading(false);
-      return;
-    }
     try {
-      const { error } = await supabase.from('bookings').update({
-        is_joined: true,
-        partner_vorname: vorname.trim(),
-        partner_nachname: nachname.trim(),
-        partner_geburtsjahr: gj,
-        partner_comment: comment || undefined,
-        booking_type: 'full',
-      }).eq('id', booking.id);
+      const { data, error } = await supabase.functions.invoke('join-booking', {
+        body: {
+          bookingId: booking.id,
+          vorname: vorname.trim(),
+          nachname: nachname.trim(),
+          geburtsjahr: gj,
+          comment: comment || null,
+        },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       // Trigger email notification to the initial booker (fire-and-forget)
       try {

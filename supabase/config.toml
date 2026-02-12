@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.notify-join]
 verify_jwt = false
+
+[functions.join-booking]
+verify_jwt = false
+
+[functions.update-booking]
+verify_jwt = false

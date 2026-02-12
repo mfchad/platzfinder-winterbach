@@ -27,10 +27,10 @@ export default function Index() {
 
   const loadBookings = useCallback(async () => {
     const { data } = await supabase
-      .from('bookings')
+      .from('bookings_public' as any)
       .select('*')
       .eq('date', dateStr);
-    setBookings((data as Booking[]) || []);
+    setBookings((data as unknown as Booking[]) || []);
   }, [dateStr]);
 
   const loadRules = useCallback(async () => {

@@ -89,7 +89,7 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
 
       // Check for existing booking
       const { data: existing } = await supabase
-        .from('bookings')
+        .from('bookings_public' as any)
         .select('id')
         .eq('court_number', court)
         .eq('date', date)

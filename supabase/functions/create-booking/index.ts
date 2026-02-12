@@ -78,6 +78,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Server-side member verification
+    const { data: isMember, error: memberError } = await supabase.rpc('verify_member', {
+      _vorname: booker_vorname.trim(),
+      _nachname: booker_nachname.trim(),
+      _geburtsjahr: booker_geburtsjahr,
+    });
+
+    if (memberError) {
+      console.error("Member verification error:", memberError);
+      return new Response(
+        JSON.stringify({ error: "Mitgliederprüfung fehlgeschlagen." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isMember) {
+      return new Response(
+        JSON.stringify({ error: "Mitglied nicht gefunden. Bitte prüfen Sie Ihre Angaben." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Insert booking (the BEFORE INSERT trigger handles window validation)
     const { data, error } = await supabase.from("bookings").insert({
       court_number,

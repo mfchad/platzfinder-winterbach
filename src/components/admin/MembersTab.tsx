@@ -507,15 +507,30 @@ export default function MembersTab() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><FileSpreadsheet className="h-5 w-5" /> Mitglieder Import</DialogTitle></DialogHeader>
 
-            {/* File upload */}
-            <div className="space-y-3">
+            {/* Custom file picker */}
+            <div className="space-y-2">
               <Label className="text-sm font-medium">Excel- oder CSV-Datei hochladen</Label>
-              <Input
+              <input
+                ref={(el) => { inputRefs.current["__file__"] = el; }}
                 type="file"
                 accept=".xlsx,.xls,.csv"
                 onChange={handleFileSelect}
-                className="cursor-pointer"
+                className="hidden"
               />
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => (inputRefs.current["__file__"] as any)?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Excel- oder CSV-Datei auswählen
+                </Button>
+                {bulkFileName && (
+                  <span className="text-sm text-muted-foreground">Datei: <strong>{bulkFileName}</strong></span>
+                )}
+              </div>
               {bulkSheetCount > 1 && (
                 <p className="text-xs text-muted-foreground">
                   ℹ️ Die Datei enthält {bulkSheetCount} Blätter – es wird nur das erste Blatt importiert.
@@ -536,19 +551,19 @@ export default function MembersTab() {
             {/* Preview */}
             {bulkParsedRows.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Vorschau ({bulkParsedRows.length} Einträge gefunden)</Label>
+                <Label className="text-sm font-medium">Vorschau der Import-Daten ({bulkParsedRows.length} Einträge)</Label>
                 <div className="border rounded-md overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs py-1 px-2">Vorname</TableHead>
                         <TableHead className="text-xs py-1 px-2">Nachname</TableHead>
-                        <TableHead className="text-xs py-1 px-2">Jahr</TableHead>
+                        <TableHead className="text-xs py-1 px-2">Geburtsjahr</TableHead>
                         <TableHead className="text-xs py-1 px-2">E-Mail</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bulkParsedRows.slice(0, 3).map((r, i) => (
+                      {bulkParsedRows.slice(0, 5).map((r, i) => (
                         <TableRow key={i}>
                           <TableCell className="text-xs py-1 px-2">{r.vorname}</TableCell>
                           <TableCell className="text-xs py-1 px-2">{r.nachname}</TableCell>
@@ -559,14 +574,14 @@ export default function MembersTab() {
                     </TableBody>
                   </Table>
                 </div>
-                {bulkParsedRows.length > 3 && (
-                  <p className="text-xs text-muted-foreground">… und {bulkParsedRows.length - 3} weitere</p>
+                {bulkParsedRows.length > 5 && (
+                  <p className="text-xs text-muted-foreground">… und {bulkParsedRows.length - 5} weitere Einträge</p>
                 )}
               </div>
             )}
 
             <Button onClick={handleBulkImport} disabled={bulkParsedRows.length === 0}>
-              {bulkParsedRows.length > 0 ? `${bulkParsedRows.length} Mitglieder importieren` : "Importieren"}
+              {bulkParsedRows.length > 0 ? `Import starten (${bulkParsedRows.length} Mitglieder)` : "Import starten"}
             </Button>
           </DialogContent>
         </Dialog>

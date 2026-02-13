@@ -1,27 +1,50 @@
 
 
-# Fix Google Login for Lovable Preview
+# Fix Google Login for Both Environments
 
 ## Problem
-Google OAuth returns a 403 because the Lovable preview domain is not registered as an authorized redirect URI. The current code calls `supabase.auth.signInWithOAuth()` directly, which only works for domains you've manually whitelisted (like your Vercel domain).
+Lovable Cloud's managed OAuth (`lovable.auth.signInWithOAuth`) uses a `/~oauth` callback path that only works on Lovable's preview infrastructure. On Vercel, this path has no handler, causing a 404.
 
 ## Solution
-Switch to Lovable Cloud's managed OAuth (`lovable.auth.signInWithOAuth`), which automatically handles redirect URIs for all Lovable preview domains.
+Detect the runtime environment and use the correct OAuth method:
+- **Lovable preview** (`*.lovable.app`): Use `lovable.auth.signInWithOAuth` (managed OAuth)
+- **Vercel / other domains**: Use `supabase.auth.signInWithOAuth` (direct OAuth, which was working before)
 
 ## Changes
 
 ### File: `src/pages/AdminLogin.tsx`
 
-1. Add import for the Lovable auth module
-2. Replace the `handleGoogleLogin` function body:
-   - **Before:** `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } })`
-   - **After:** `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`
+Update `handleGoogleLogin` to branch based on hostname:
 
-That is the only change needed. The rest of the login page (email/password login, UI) stays the same.
+```typescript
+const handleGoogleLogin = async () => {
+  setGoogleLoading(true);
+  try {
+    const isLovablePreview = window.location.hostname.endsWith('.lovable.app');
+    
+    if (isLovablePreview) {
+      // Managed OAuth for Lovable preview
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (error) throw error;
+    } else {
+      // Direct Supabase OAuth for Vercel/production
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
+    }
+  } catch (e: any) {
+    toast({ title: "Anmeldefehler", description: e.message || "Google-Anmeldung fehlgeschlagen.", variant: "destructive" });
+  } finally { setGoogleLoading(false); }
+};
+```
+
+No other files need changes. Both `supabase` and `lovable` imports are already present in the file.
 
 ## Why This Works
-The `lovable.auth.signInWithOAuth` function uses Lovable Cloud's managed Google OAuth credentials, which already have the Lovable preview domains whitelisted. After Google authenticates the user, the managed flow automatically sets the Supabase session, so the existing `onAuthStateChange` listener will still detect the login and redirect to `/admin/dashboard`.
-
-## Impact on Vercel Deployment
-The managed OAuth also works for your Vercel domain -- Lovable Cloud handles both environments. No changes needed in your Vercel or Google Cloud configuration.
+- On Lovable preview: the managed flow handles `/~oauth` correctly
+- On Vercel: the direct Supabase OAuth redirects back to the origin with tokens in the URL hash, which your existing `AuthRedirectHandler` in `App.tsx` already handles
 

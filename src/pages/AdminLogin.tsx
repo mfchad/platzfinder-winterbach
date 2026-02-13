@@ -39,10 +39,20 @@ export default function AdminLogin() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (error) throw error;
+      const isLovablePreview = window.location.hostname.endsWith('.lovable.app');
+      
+      if (isLovablePreview) {
+        const { error } = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.origin,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: window.location.origin },
+        });
+        if (error) throw error;
+      }
     } catch (e: any) {
       toast({ title: "Anmeldefehler", description: e.message || "Google-Anmeldung fehlgeschlagen.", variant: "destructive" });
     } finally { setGoogleLoading(false); }

@@ -18,11 +18,23 @@ export default function AdminLogin() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate('/admin/dashboard');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin');
+        if (roles && roles.length > 0) {
+          navigate('/admin/dashboard');
+        } else {
+          await supabase.auth.signOut();
+          toast({ title: "Kein Zugriff", description: "Ihr Konto ist nicht als Administrator registriert.", variant: "destructive" });
+        }
+      }
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -29,10 +29,11 @@ export default function AdminLogin() {
           navigate('/admin/dashboard');
         } else {
           await supabase.auth.signOut();
+          toast({ title: "Kein Zugriff", description: "Ihr Konto ist nicht als Administrator registriert.", variant: "destructive" });
         }
       }
     });
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +75,7 @@ export default function AdminLogin() {
       } else {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: window.location.origin },
+          options: { redirectTo: window.location.origin + '/admin' },
         });
         if (error) throw error;
       }

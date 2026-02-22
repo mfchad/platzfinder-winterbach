@@ -15,9 +15,18 @@ function AuthRedirectHandler() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session && window.location.hash.includes('access_token')) {
-        navigate('/admin/dashboard', { replace: true });
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin');
+        if (roles && roles.length > 0) {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          await supabase.auth.signOut();
+        }
       }
     });
     return () => subscription.unsubscribe();

@@ -51,7 +51,7 @@ export default function AdminLogin() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const isLovablePreview = window.location.hostname.endsWith('.lovable.app');
+      const isLovablePreview = window.location.hostname.endsWith('.lovable.app') || window.location.hostname.endsWith('.lovableproject.com');
       
       if (isLovablePreview) {
         const { error } = await lovable.auth.signInWithOAuth("google", {

@@ -18,7 +18,8 @@ export default function AdminLogin() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Check if already logged in as admin on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const { data: isAdmin } = await supabase.rpc('has_role', {
           _user_id: session.user.id,
@@ -28,12 +29,10 @@ export default function AdminLogin() {
           navigate('/admin/dashboard');
         } else {
           await supabase.auth.signOut();
-          toast({ title: "Kein Zugriff", description: "Ihr Konto ist nicht als Administrator registriert.", variant: "destructive" });
         }
       }
     });
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,10 +52,25 @@ export default function AdminLogin() {
       const isLovablePreview = window.location.hostname.endsWith('.lovable.app') || window.location.hostname.endsWith('.lovableproject.com');
       
       if (isLovablePreview) {
-        const { error } = await lovable.auth.signInWithOAuth("google", {
+        const result = await lovable.auth.signInWithOAuth("google", {
           redirect_uri: window.location.origin,
         });
-        if (error) throw error;
+        if (result.error) throw result.error;
+        
+        // After successful OAuth, check admin role
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: isAdmin } = await supabase.rpc('has_role', {
+            _user_id: session.user.id,
+            _role: 'admin',
+          });
+          if (isAdmin) {
+            navigate('/admin/dashboard');
+          } else {
+            await supabase.auth.signOut();
+            toast({ title: "Kein Zugriff", description: "Ihr Konto ist nicht als Administrator registriert.", variant: "destructive" });
+          }
+        }
       } else {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",

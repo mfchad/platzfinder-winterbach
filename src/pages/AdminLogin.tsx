@@ -20,12 +20,11 @@ export default function AdminLogin() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin');
-        if (roles && roles.length > 0) {
+        const { data: isAdmin } = await supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin',
+        });
+        if (isAdmin) {
           navigate('/admin/dashboard');
         } else {
           await supabase.auth.signOut();

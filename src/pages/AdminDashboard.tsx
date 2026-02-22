@@ -16,12 +16,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAdmin = async (s: any) => {
       if (!s) { navigate('/admin'); return; }
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', s.user.id)
-        .eq('role', 'admin');
-      if (!roles || roles.length === 0) {
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: s.user.id,
+        _role: 'admin',
+      });
+      if (!isAdmin) {
         await supabase.auth.signOut();
         navigate('/admin');
         return;

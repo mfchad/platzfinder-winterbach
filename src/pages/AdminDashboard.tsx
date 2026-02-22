@@ -14,14 +14,24 @@ export default function AdminDashboard() {
   const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
+    const checkAdmin = async (s: any) => {
+      if (!s) { navigate('/admin'); return; }
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: s.user.id,
+        _role: 'admin',
+      });
+      if (!isAdmin) {
+        await supabase.auth.signOut();
+        navigate('/admin');
+        return;
+      }
+      setSession(s);
+    };
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (!s) navigate('/admin');
+      if (!s) { setSession(null); navigate('/admin'); return; }
+      checkAdmin(s);
     });
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (!s) navigate('/admin');
-      setSession(s);
-    });
+    supabase.auth.getSession().then(({ data: { session: s } }) => checkAdmin(s));
     return () => subscription.unsubscribe();
   }, [navigate]);
 

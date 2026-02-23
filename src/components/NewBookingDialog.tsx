@@ -121,7 +121,10 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
         },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        const errorMsg = fnData?.error || fnError.message || "Buchung fehlgeschlagen.";
+        throw new Error(errorMsg);
+      }
       if (fnData?.error) throw new Error(fnData.error);
 
       toast({ title: "Erfolg", description: "Buchung wurde erstellt!" });

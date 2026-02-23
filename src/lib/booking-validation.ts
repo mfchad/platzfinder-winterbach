@@ -17,10 +17,12 @@ export async function verifyMember(vorname: string, nachname: string, geburtsjah
 
 export function isWithinBookingWindow(date: string, hour: number, rules: Record<string, string>): boolean {
   const windowHours = getRuleNum(rules, 'booking_window_hours', 24);
+  // Build slot time as local time (matching Europe/Berlin context)
   const slotTime = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
   const now = new Date();
   const diffMs = slotTime.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
+  // Slot must be in the future and within the booking window
   return diffHours > 0 && diffHours <= windowHours;
 }
 

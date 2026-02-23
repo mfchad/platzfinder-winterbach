@@ -6,13 +6,46 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+  if (!secret) return true;
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret, response: token }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (e) {
+    console.error("Turnstile verification error:", e);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { bookingId, vorname, nachname, geburtsjahr, comment } = await req.json();
+    const { bookingId, vorname, nachname, geburtsjahr, comment, turnstileToken } = await req.json();
+
+    // Turnstile verification
+    if (turnstileToken) {
+      const valid = await verifyTurnstile(turnstileToken);
+      if (!valid) {
+        return new Response(
+          JSON.stringify({ error: "Bot-Überprüfung fehlgeschlagen." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (Deno.env.get("TURNSTILE_SECRET_KEY")) {
+      return new Response(
+        JSON.stringify({ error: "Bot-Überprüfung erforderlich." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!bookingId || !vorname?.trim() || !nachname?.trim() || !geburtsjahr) {
       return new Response(

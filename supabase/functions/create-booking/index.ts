@@ -6,6 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+  if (!secret) {
+    console.warn("TURNSTILE_SECRET_KEY not set, skipping verification");
+    return true;
+  }
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret, response: token }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (e) {
+    console.error("Turnstile verification error:", e);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,6 +40,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Turnstile verification
+    if (body.turnstileToken) {
+      const valid = await verifyTurnstile(body.turnstileToken);
+      if (!valid) {
+        return new Response(
+          JSON.stringify({ error: "Bot-Überprüfung fehlgeschlagen. Bitte versuchen Sie es erneut." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (Deno.env.get("TURNSTILE_SECRET_KEY")) {
+      // If Turnstile is configured but no token provided, reject
+      return new Response(
+        JSON.stringify({ error: "Bot-Überprüfung erforderlich." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const {

@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-
 import { useToast } from "@/hooks/use-toast";
 import type { Booking } from "@/lib/types";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 interface ExistingBookingDialogProps {
   open: boolean;
@@ -29,7 +29,11 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
   const [showConfirm, setShowConfirm] = useState(false);
   const [verified, setVerified] = useState(false);
   const [infoData, setInfoData] = useState<{ names: string[]; comments: string[] } | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const handleTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
 
   const isHalf = booking.booking_type === 'half' && !booking.is_joined;
   const isFull = (booking.booking_type === 'full' || booking.booking_type === 'double') || booking.is_joined;
@@ -38,7 +42,7 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
     setAction(null);
     setVorname(""); setNachname(""); setGeburtsjahr("");
     setComment(""); setShowConfirm(false); setInfoData(null);
-    setVerified(false);
+    setVerified(false); setTurnstileToken(null);
   };
 
   const handleClose = () => {
@@ -163,6 +167,7 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
           nachname: nachname.trim(),
           geburtsjahr: gj,
           comment: comment || null,
+          turnstileToken: turnstileToken,
         },
       });
       if (error) throw error;
@@ -346,9 +351,10 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
                 placeholder="Wird nur dem Bucher und dem Administrator angezeigt"
                 rows={2} />
             </div>
+            <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
             <div className="flex gap-2">
               <Button variant="outline" onClick={resetAction}>Zurück</Button>
-              <Button onClick={handleJoin} disabled={loading}>Teilnehmen</Button>
+              <Button onClick={handleJoin} disabled={loading || !turnstileToken}>Teilnehmen</Button>
             </div>
           </div>
         </DialogContent>

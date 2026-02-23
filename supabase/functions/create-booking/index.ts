@@ -137,6 +137,100 @@ Deno.serve(async (req) => {
       );
     }
 
+    // --- Server-side core time limit enforcement ---
+    // Fetch all rules
+    const { data: rulesData } = await supabase.from("booking_rules").select("rule_key, rule_value");
+    const rules: Record<string, string> = {};
+    (rulesData || []).forEach((r: any) => { rules[r.rule_key] = r.rule_value; });
+
+    const getRuleNum = (key: string, fallback: number) => {
+      const v = rules[key];
+      return v ? parseInt(v, 10) : fallback;
+    };
+
+    // Check if slot is core time
+    const coreStart = getRuleNum("core_time_start", 17);
+    const coreEnd = getRuleNum("core_time_end", 20);
+    const coreDaysStr = rules["core_time_days"] || "1,2,3,4,5";
+    const coreDays = coreDaysStr.split(",").map((d: string) => parseInt(d.trim(), 10));
+    const slotDate = new Date(date);
+    const jsDay = slotDate.getDay();
+    const isoDay = jsDay === 0 ? 7 : jsDay;
+    const isCoreTime = coreDays.includes(isoDay) && start_hour >= coreStart && start_hour < coreEnd;
+
+    if (isCoreTime) {
+      // Get week bounds (Mon-Sun)
+      const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay;
+      const monday = new Date(slotDate);
+      monday.setDate(slotDate.getDate() + mondayOffset);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      const mondayStr = monday.toISOString().split("T")[0];
+      const sundayStr = sunday.toISOString().split("T")[0];
+
+      // Query existing bookings for this member in this week
+      const { data: weekBookings } = await supabase
+        .from("bookings")
+        .select("date, start_hour, booking_type")
+        .ilike("booker_vorname", booker_vorname.trim())
+        .ilike("booker_nachname", booker_nachname.trim())
+        .eq("booker_geburtsjahr", booker_geburtsjahr)
+        .gte("date", mondayStr)
+        .lte("date", sundayStr)
+        .neq("booking_type", "special");
+
+      const allBookings = weekBookings || [];
+
+      // Filter to core-time bookings only
+      const coreBookings = allBookings.filter((b: any) => {
+        const bd = new Date(b.date);
+        const bJsDay = bd.getDay();
+        const bIsoDay = bJsDay === 0 ? 7 : bJsDay;
+        return coreDays.includes(bIsoDay) && b.start_hour >= coreStart && b.start_hour < coreEnd;
+      });
+
+      const todayCoreBookings = coreBookings.filter((b: any) => b.date === date);
+      const isDouble = booking_type === "double";
+
+      if (isDouble) {
+        const maxDayDouble = getRuleNum("double_max_per_day", 2);
+        const maxWeekDouble = getRuleNum("double_max_per_week", 6);
+        const todayDoubles = todayCoreBookings.filter((b: any) => b.booking_type === "double").length;
+        const weekDoubles = coreBookings.filter((b: any) => b.booking_type === "double").length;
+
+        if (todayDoubles >= maxDayDouble) {
+          return new Response(
+            JSON.stringify({ error: `Kernzeit-Limit erreicht: max. ${maxDayDouble} Doppel-Buchung(en) pro Tag erlaubt.` }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (weekDoubles >= maxWeekDouble) {
+          return new Response(
+            JSON.stringify({ error: `Kernzeit-Limit erreicht: max. ${maxWeekDouble} Doppel-Buchung(en) pro Woche erlaubt.` }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        const maxDaySingle = getRuleNum("single_max_per_day", 1);
+        const maxWeekSingle = getRuleNum("single_max_per_week", 3);
+        const todaySingles = todayCoreBookings.filter((b: any) => b.booking_type !== "double").length;
+        const weekSingles = coreBookings.filter((b: any) => b.booking_type !== "double").length;
+
+        if (todaySingles >= maxDaySingle) {
+          return new Response(
+            JSON.stringify({ error: `Kernzeit-Limit erreicht: max. ${maxDaySingle} Einzel-Buchung(en) pro Tag erlaubt.` }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (weekSingles >= maxWeekSingle) {
+          return new Response(
+            JSON.stringify({ error: `Kernzeit-Limit erreicht: max. ${maxWeekSingle} Einzel-Buchung(en) pro Woche erlaubt.` }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     // Insert booking (the BEFORE INSERT trigger handles window validation)
     const { data, error } = await supabase.from("bookings").insert({
       court_number,

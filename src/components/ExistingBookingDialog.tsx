@@ -114,7 +114,11 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
           geburtsjahr: parseInt(geburtsjahr, 10),
         },
       });
-      if (error) throw error;
+      if (error) {
+        let errorMsg = "Stornierung fehlgeschlagen.";
+        try { const body = await error.context?.json(); errorMsg = body?.error || errorMsg; } catch { errorMsg = data?.error || error.message || errorMsg; }
+        throw new Error(errorMsg);
+      }
       if (data?.error) throw new Error(data.error);
       toast({ title: "Erfolg", description: "Buchung wurde storniert." });
       onSuccess();
@@ -142,7 +146,11 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
           bookerComment: editComment,
         },
       });
-      if (error) throw error;
+      if (error) {
+        let errorMsg = "Aktualisierung fehlgeschlagen.";
+        try { const body = await error.context?.json(); errorMsg = body?.error || errorMsg; } catch { errorMsg = data?.error || error.message || errorMsg; }
+        throw new Error(errorMsg);
+      }
       if (data?.error) throw new Error(data.error);
       toast({ title: "Erfolg", description: "Buchung wurde aktualisiert." });
       onSuccess();
@@ -170,7 +178,11 @@ export default function ExistingBookingDialog({ open, onClose, booking, onSucces
           turnstileToken: turnstileToken,
         },
       });
-      if (error) throw error;
+      if (error) {
+        let errorMsg = "Beitritt fehlgeschlagen.";
+        try { const body = await error.context?.json(); errorMsg = body?.error || errorMsg; } catch { errorMsg = data?.error || error.message || errorMsg; }
+        throw new Error(errorMsg);
+      }
       if (data?.error) throw new Error(data.error);
 
       // Trigger email notification to the initial booker (fire-and-forget)

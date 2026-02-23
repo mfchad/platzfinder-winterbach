@@ -50,10 +50,6 @@ export async function checkCoreTimeLimits(
   date: string, bookingType: 'half' | 'full' | 'double',
   rules: Record<string, string>
 ): Promise<string | null> {
-  const isDouble = bookingType === 'double';
-  const maxDay = getRuleNum(rules, isDouble ? 'double_max_per_day' : 'single_max_per_day', isDouble ? 2 : 1);
-  const maxWeek = getRuleNum(rules, isDouble ? 'double_max_per_week' : 'single_max_per_week', isDouble ? 6 : 3);
-
   // Get week bounds (Mon-Sun)
   const d = new Date(date);
   const jsDay = d.getDay();
@@ -78,15 +74,37 @@ export async function checkCoreTimeLimits(
 
   const bookings = (weekBookings || []) as Booking[];
   
-  // Check core time bookings
+  // Filter to only core-time bookings
   const coreBookings = bookings.filter(b => isCoreTime(b.date, b.start_hour, rules));
   const todayCore = coreBookings.filter(b => b.date === date);
 
-  if (todayCore.length >= maxDay) {
-    return `Maximale Buchungen pro Tag in der Kernzeit erreicht (${maxDay} Std.)`;
-  }
-  if (coreBookings.length >= maxWeek) {
-    return `Maximale Buchungen pro Woche in der Kernzeit erreicht (${maxWeek} Std.)`;
+  // Check limits separately for singles (full/half) and doubles
+  const isDouble = bookingType === 'double';
+
+  if (isDouble) {
+    const maxDayDouble = getRuleNum(rules, 'double_max_per_day', 2);
+    const maxWeekDouble = getRuleNum(rules, 'double_max_per_week', 6);
+    const todayDoubles = todayCore.filter(b => b.booking_type === 'double').length;
+    const weekDoubles = coreBookings.filter(b => b.booking_type === 'double').length;
+
+    if (todayDoubles >= maxDayDouble) {
+      return `Sie haben Ihr tägliches Kernzeit-Limit für Doppel erreicht (max. ${maxDayDouble} Std./Tag).`;
+    }
+    if (weekDoubles >= maxWeekDouble) {
+      return `Sie haben Ihr wöchentliches Kernzeit-Limit für Doppel erreicht (max. ${maxWeekDouble} Std./Woche).`;
+    }
+  } else {
+    const maxDaySingle = getRuleNum(rules, 'single_max_per_day', 1);
+    const maxWeekSingle = getRuleNum(rules, 'single_max_per_week', 3);
+    const todaySingles = todayCore.filter(b => b.booking_type !== 'double').length;
+    const weekSingles = coreBookings.filter(b => b.booking_type !== 'double').length;
+
+    if (todaySingles >= maxDaySingle) {
+      return `Sie haben Ihr tägliches Kernzeit-Limit für Einzel erreicht (max. ${maxDaySingle} Std./Tag).`;
+    }
+    if (weekSingles >= maxWeekSingle) {
+      return `Sie haben Ihr wöchentliches Kernzeit-Limit für Einzel erreicht (max. ${maxWeekSingle} Std./Woche).`;
+    }
   }
 
   return null;

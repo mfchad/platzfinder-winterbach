@@ -12,7 +12,7 @@ Right now, anyone with a Google account can log in and see the admin dashboard (
 
 2. **Post-login check**: After Google login, the app checks whether the user has admin privileges. If not, they are immediately signed out and shown an error message ("Kein Zugriff -- Ihr Konto ist nicht als Administrator registriert.").
 
-3. **Authorized emails**: tinaschwan86@gmail.com, dieterschwan111@gmail.com, welter.wnd@gmail.com, and the existing mfchad@gmail.com.
+3. **Authorized emails**: tinaschwan86@gmail.com, dieterschwan111@gmail.com, weltera.wnd@gmail.com, and the existing mfchad@gmail.com.
 
 ## Technical Details
 

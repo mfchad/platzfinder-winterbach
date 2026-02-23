@@ -122,7 +122,18 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
       });
 
       if (fnError) {
-        const errorMsg = fnData?.error || fnError.message || "Buchung fehlgeschlagen.";
+        // Extract the actual error message from the response body
+        let errorMsg = "Buchung fehlgeschlagen.";
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json();
+            errorMsg = body?.error || errorMsg;
+          } else if (fnData?.error) {
+            errorMsg = fnData.error;
+          }
+        } catch {
+          errorMsg = fnData?.error || fnError.message || errorMsg;
+        }
         throw new Error(errorMsg);
       }
       if (fnData?.error) throw new Error(fnData.error);

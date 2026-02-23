@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyMember, isWithinBookingWindow, isHalfBookingAllowed, isCoreTime, checkCoreTimeLimits } from "@/lib/booking-validation";
 import { useToast } from "@/hooks/use-toast";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 interface NewBookingDialogProps {
   open: boolean;
@@ -30,7 +31,11 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
   const [doubleNames, setDoubleNames] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const handleTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
 
   const halfAllowed = isHalfBookingAllowed(date, hour, rules);
   const withinWindow = isWithinBookingWindow(date, hour, rules);
@@ -112,6 +117,7 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
           booker_comment: bookingType === 'half' ? comment : undefined,
           double_match_names: bookingType === 'double' ? doubleNames : undefined,
           website: honeypot,
+          turnstileToken: turnstileToken,
         },
       });
 
@@ -132,6 +138,7 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
   const resetForm = () => {
     setVorname(""); setNachname(""); setGeburtsjahr("");
     setBookingType("full"); setComment(""); setDoubleNames(""); setHoneypot("");
+    setTurnstileToken(null);
   };
 
   return (
@@ -246,7 +253,9 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
             />
           </div>
 
-          <Button onClick={handleSubmit} disabled={loading || !isSlotBookable} className="w-full">
+          <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
+
+          <Button onClick={handleSubmit} disabled={loading || !isSlotBookable || !turnstileToken} className="w-full">
             {loading ? "Wird gebucht..." : "Buchen"}
           </Button>
         </div>

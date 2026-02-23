@@ -155,13 +155,15 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("Insert error:", error);
-      // Unique constraint violation = race condition / double booking
       const isDuplicate = error.code === "23505" || error.message?.includes("duplicate key") || error.message?.includes("uq_bookings_court_date_hour");
+      const isRaisedException = error.code === "P0001";
+      const userMessage = isDuplicate
+        ? "Dieser Platz wurde gerade eben von jemand anderem gebucht."
+        : isRaisedException
+          ? error.message
+          : "Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.";
       return new Response(
-        JSON.stringify({ error: isDuplicate
-          ? "Dieser Platz wurde gerade eben von jemand anderem gebucht."
-          : error.message
-        }),
+        JSON.stringify({ error: userMessage }),
         { status: isDuplicate ? 409 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

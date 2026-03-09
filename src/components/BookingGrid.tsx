@@ -65,10 +65,9 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
 
         {/* Data rows */}
         {hours.map(hour => (
-          <>
+          <React.Fragment key={hour}>
             {/* Time label (sticky left) */}
             <div
-              key={`t-${hour}`}
               className="sticky left-0 z-10 bg-background text-xs font-medium text-muted-foreground p-2 flex items-center justify-center border-r border-border shadow-[2px_0_4px_-2px_hsl(var(--border))]"
             >
               {String(hour).padStart(2, '0')}:00
@@ -90,7 +89,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
                 />
               );
             })}
-          </>
+          </React.Fragment>
         ))}
       </div>
     </div>

@@ -11,6 +11,7 @@ import ExistingBookingDialog from "@/components/ExistingBookingDialog";
 import { fetchRules, getRuleNum, clearRulesCache } from "@/lib/booking-rules";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
+import clubBadge from "@/assets/Wappen_TCW.png";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -52,24 +53,40 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground shadow-lg">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1
-            className="font-display text-lg sm:text-2xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => { setDate(new Date()); }}
-          >
-            Platzbuchung Tennisclub Winterbach e.V. 1973
-          </h1>
-          <Button
-            size="sm"
-            onClick={() => navigate('/admin')}
-            className="bg-primary text-primary-foreground hover:bg-primary/80 border-none"
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Verwaltung</span>
-          </Button>
+      {/* Header with navy gradient and gold stripe */}
+      <header className="relative shadow-lg">
+        <div
+          className="bg-gradient-to-r from-club-navy via-club-royal to-club-navy"
+        >
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Badge with gold ring */}
+              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-club-gold bg-card/10 p-0.5 shadow-md">
+                <img
+                  src={clubBadge}
+                  alt="TC Winterbach Wappen"
+                  className="w-full h-full object-contain rounded-full"
+                />
+              </div>
+              <h1
+                className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer hover:text-club-gold transition-colors"
+                onClick={() => { setDate(new Date()); }}
+              >
+                Platzbuchung TC Winterbach
+              </h1>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate('/admin')}
+              className="bg-white/10 text-white hover:bg-white/20 border border-white/20 backdrop-blur-sm"
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Verwaltung</span>
+            </Button>
+          </div>
         </div>
+        {/* Gold decorative stripe */}
+        <div className="h-1 bg-gradient-to-r from-club-gold via-accent to-club-gold" />
       </header>
 
       {/* Main Content */}

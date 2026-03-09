@@ -29,12 +29,12 @@ interface AdminBookingsGridProps {
 }
 
 export default function AdminBookingsGrid({
-  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onUpdate, onDrillDown,
+  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onUpdate, onDrillDown, onReload,
 }: AdminBookingsGridProps) {
   if (timeScale === "month") return <MonthGrid bookings={bookings} date={date} onDrillDown={(d) => onDrillDown?.(d, "day")} />;
   if (timeScale === "year") return <YearGrid bookings={bookings} date={date} onDrillDown={onDrillDown} />;
   if (timeScale === "week") return <WeekGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onDrillDown={(d) => onDrillDown?.(d, "day")} />;
-  return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onUpdate={onUpdate} />;
+  return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onUpdate={onUpdate} onReload={onReload} />;
 }
 
 // ===== Day Grid =====

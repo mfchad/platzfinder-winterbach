@@ -293,6 +293,66 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Admin Create Booking Dialog */}
+      <Dialog open={!!createSlot} onOpenChange={(open) => !open && setCreateSlot(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              Admin-Buchung — Platz {createSlot?.court}, {String(createSlot?.hour ?? 0).padStart(2, "0")}:00
+            </DialogTitle>
+            <DialogDescription>
+              Diese Buchung umgeht alle Regelwerk-Einschränkungen (24h-Vorlauf, Kernzeit-Limits).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Vorname</Label>
+                <Input value={createVorname} onChange={e => setCreateVorname(e.target.value)} placeholder="Max" />
+              </div>
+              <div>
+                <Label>Nachname</Label>
+                <Input value={createNachname} onChange={e => setCreateNachname(e.target.value)} placeholder="Mustermann" />
+              </div>
+            </div>
+            <div>
+              <Label>Geburtsjahr</Label>
+              <Input type="number" value={createGeburtsjahr} onChange={e => setCreateGeburtsjahr(e.target.value)} placeholder="1984" />
+            </div>
+            <div>
+              <Label>Buchungstyp</Label>
+              <Select value={createType} onValueChange={setCreateType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full">Einzel</SelectItem>
+                  <SelectItem value="half">Halbbuchung</SelectItem>
+                  <SelectItem value="double">Doppel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {createType === "half" && (
+              <div>
+                <Label>Kommentar</Label>
+                <Textarea value={createComment} onChange={e => setCreateComment(e.target.value)} placeholder="Optional" rows={2} />
+              </div>
+            )}
+            {createType === "double" && (
+              <div>
+                <Label>Mitspieler-Namen</Label>
+                <Textarea value={createDoubleNames} onChange={e => setCreateDoubleNames(e.target.value)} placeholder="Namen der anderen 3 Spieler" rows={2} />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateSlot(null)}>Abbrechen</Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Buchen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -119,8 +119,13 @@
 
 @layer components {
   .court-cell {
-    @apply border border-border rounded-sm transition-all duration-150 cursor-pointer;
-    min-height: 3.5rem;
+    @apply transition-all duration-150 cursor-pointer;
+    min-height: 3rem;
+  }
+  @media (min-width: 640px) {
+    .court-cell {
+      min-height: 3.5rem;
+    }
   }
   .court-cell-empty {
     background: hsl(var(--court-empty));

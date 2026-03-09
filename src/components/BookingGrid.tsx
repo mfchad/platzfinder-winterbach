@@ -36,43 +36,61 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
     return hour < now.getHours();
   }
 
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[700px]">
-        {/* Header */}
-        <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: `80px repeat(${courtsCount}, 1fr)` }}>
-          <div className="text-sm font-semibold text-muted-foreground p-2">Zeit</div>
-          {courts.map(c => (
-            <div key={c} className="text-center font-display font-semibold text-sm p-2 rounded-t-md bg-court-header text-primary-foreground">
-              Platz {c}
-            </div>
-          ))}
-        </div>
+  const colWidth = courtsCount <= 4 ? 'minmax(100px, 1fr)' : 'minmax(85px, 1fr)';
 
-        {/* Rows */}
+  return (
+    <div className="overflow-auto max-h-[75vh] rounded-md border border-border relative">
+      <div
+        className="grid gap-px bg-border"
+        style={{
+          gridTemplateColumns: `60px repeat(${courtsCount}, ${colWidth})`,
+          minWidth: `${60 + courtsCount * 85}px`,
+        }}
+      >
+        {/* Top-left corner cell (sticky both ways) */}
+        <div
+          className="sticky left-0 top-0 z-30 bg-background text-xs font-semibold text-muted-foreground p-2 flex items-center justify-center border-r border-b border-border shadow-[2px_2px_4px_-2px_hsl(var(--border))]"
+        >
+          Zeit
+        </div>
+        {/* Header row (sticky top) */}
+        {courts.map(c => (
+          <div
+            key={c}
+            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-court-header text-primary-foreground border-b border-border shadow-[0_2px_4px_-2px_hsl(var(--border))]"
+          >
+            Platz {c}
+          </div>
+        ))}
+
+        {/* Data rows */}
         {hours.map(hour => (
-          <div key={hour} className="grid gap-1 mb-1" style={{ gridTemplateColumns: `80px repeat(${courtsCount}, 1fr)` }}>
-            <div className="text-sm font-medium text-muted-foreground p-2 flex items-center">
+          <>
+            {/* Time label (sticky left) */}
+            <div
+              key={`t-${hour}`}
+              className="sticky left-0 z-10 bg-background text-xs font-medium text-muted-foreground p-2 flex items-center justify-center border-r border-border shadow-[2px_0_4px_-2px_hsl(var(--border))]"
+            >
               {String(hour).padStart(2, '0')}:00
             </div>
+            {/* Court cells */}
             {courts.map(court => {
               const booking = bookingMap[`${court}-${hour}`];
               const past = isPast(hour);
               return (
                 <SlotCell
-                  key={court}
+                  key={`${court}-${hour}`}
                   booking={booking}
                   isPast={past}
                   onClick={() => {
                     if (past) return;
-                    if (booking?.booking_type === 'special' && !booking.created_by_admin) return;
                     if (booking?.booking_type === 'special') return;
                     onSlotClick(court, hour, booking);
                   }}
                 />
               );
             })}
-          </div>
+          </>
         ))}
       </div>
     </div>

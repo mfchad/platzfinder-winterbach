@@ -199,4 +199,13 @@
     opacity: 0.6;
     border-radius: 8px;
   }
+
+  /* Hide scrollbar for horizontal tab navigation */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

@@ -25,6 +25,7 @@ interface AdminBookingsGridProps {
   onDelete: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Booking>) => void;
   onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void;
+  onReload?: () => void;
 }
 
 export default function AdminBookingsGrid({

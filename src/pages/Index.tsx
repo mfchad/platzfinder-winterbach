@@ -18,7 +18,7 @@ export default function Index() {
   const [date, setDate] = useState(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rules, setRules] = useState<Record<string, string>>({});
-  const [newBooking, setNewBooking] = useState<{ court: number; hour: number } | null>(null);
+  const [newBooking, setNewBooking] = useState<{court: number;hour: number;} | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const dateStr = formatDateISO(date);
@@ -27,11 +27,11 @@ export default function Index() {
   const courtsCount = getRuleNum(rules, 'courts_count', 6);
 
   const loadBookings = useCallback(async () => {
-    const { data } = await supabase
-      .from('bookings_public' as any)
-      .select('*')
-      .eq('date', dateStr);
-    setBookings((data as unknown as Booking[]) || []);
+    const { data } = await supabase.
+    from('bookings_public' as any).
+    select('*').
+    eq('date', dateStr);
+    setBookings(data as unknown as Booking[] || []);
   }, [dateStr]);
 
   const loadRules = useCallback(async () => {
@@ -40,8 +40,8 @@ export default function Index() {
     setRules(r);
   }, []);
 
-  useEffect(() => { loadRules(); }, [loadRules]);
-  useEffect(() => { loadBookings(); }, [loadBookings]);
+  useEffect(() => {loadRules();}, [loadRules]);
+  useEffect(() => {loadBookings();}, [loadBookings]);
 
   const handleSlotClick = (court: number, hour: number, booking?: Booking) => {
     if (booking) {
@@ -57,9 +57,9 @@ export default function Index() {
       <header className="relative shadow-lg">
         <div
           style={{
-            background: 'linear-gradient(135deg, hsl(var(--club-navy)) 0%, hsl(var(--club-badge-blue)) 55%, hsl(var(--club-royal)) 100%)',
-          }}
-        >
+            background: 'linear-gradient(135deg, hsl(var(--club-navy)) 0%, hsl(var(--club-badge-blue)) 55%, hsl(var(--club-royal)) 100%)'
+          }}>
+          
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Badge with contoured golden glow */}
@@ -71,21 +71,21 @@ export default function Index() {
                   width: 48,
                   height: 48,
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 6px hsl(var(--club-gold))) drop-shadow(0 0 14px hsla(38, 63%, 46%, 0.6))',
-                }}
-              />
+                  filter: 'drop-shadow(0 0 6px hsl(var(--club-gold))) drop-shadow(0 0 14px hsla(38, 63%, 46%, 0.6))'
+                }} />
+              
               <h1
                 className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer transition-colors hover:text-yellow-300"
-                onClick={() => { setDate(new Date()); }}
-              >
-                Platzbuchung TC Winterbach
+                onClick={() => {setDate(new Date());}}>
+                
+                Platzbuchung TC Winterbach e.v. 1973  
               </h1>
             </div>
             <Button
               size="sm"
               onClick={() => navigate('/admin')}
-              className="bg-white/10 text-white hover:bg-white/20 border border-white/20 backdrop-blur-sm"
-            >
+              className="bg-white/10 text-white hover:bg-white/20 border border-white/20 backdrop-blur-sm">
+              
               <Settings className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Verwaltung</span>
             </Button>
@@ -95,9 +95,9 @@ export default function Index() {
         <div
           className="h-[3px]"
           style={{
-            background: 'linear-gradient(90deg, transparent 0%, hsl(var(--club-gold-stripe)) 20%, hsl(var(--club-gold-stripe)) 80%, transparent 100%)',
-          }}
-        />
+            background: 'linear-gradient(90deg, transparent 0%, hsl(var(--club-gold-stripe)) 20%, hsl(var(--club-gold-stripe)) 80%, transparent 100%)'
+          }} />
+        
       </header>
 
       {/* Main Content */}
@@ -110,32 +110,32 @@ export default function Index() {
           startHour={startHour}
           endHour={endHour}
           courtsCount={courtsCount}
-          onSlotClick={handleSlotClick}
-        />
+          onSlotClick={handleSlotClick} />
+        
 
         <Legend />
       </main>
 
       {/* Dialogs */}
-      {newBooking && (
-        <NewBookingDialog
-          open={!!newBooking}
-          onClose={() => setNewBooking(null)}
-          court={newBooking.court}
-          hour={newBooking.hour}
-          date={dateStr}
-          rules={rules}
-          onSuccess={loadBookings}
-        />
-      )}
-      {selectedBooking && (
-        <ExistingBookingDialog
-          open={!!selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          booking={selectedBooking}
-          onSuccess={loadBookings}
-        />
-      )}
-    </div>
-  );
+      {newBooking &&
+      <NewBookingDialog
+        open={!!newBooking}
+        onClose={() => setNewBooking(null)}
+        court={newBooking.court}
+        hour={newBooking.hour}
+        date={dateStr}
+        rules={rules}
+        onSuccess={loadBookings} />
+
+      }
+      {selectedBooking &&
+      <ExistingBookingDialog
+        open={!!selectedBooking}
+        onClose={() => setSelectedBooking(null)}
+        booking={selectedBooking}
+        onSuccess={loadBookings} />
+
+      }
+    </div>);
+
 }

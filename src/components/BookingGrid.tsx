@@ -39,25 +39,31 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
   const colWidth = courtsCount <= 4 ? 'minmax(100px, 1fr)' : 'minmax(85px, 1fr)';
 
   return (
-    <div className="overflow-auto max-h-[75vh] rounded-lg border border-border shadow-sm relative">
+    <div className="booking-grid-area overflow-auto max-h-[75vh] rounded-xl shadow-lg relative">
       <div
-        className="grid gap-px bg-border"
+        className="grid"
         style={{
-          gridTemplateColumns: `60px repeat(${courtsCount}, ${colWidth})`,
-          minWidth: `${60 + courtsCount * 85}px`,
+          gridTemplateColumns: `52px repeat(${courtsCount}, ${colWidth})`,
+          minWidth: `${52 + courtsCount * 85}px`,
+          gap: '4px',
         }}
       >
         {/* Top-left corner cell */}
         <div
-          className="sticky left-0 top-0 z-30 bg-card text-foreground text-xs font-semibold p-2 flex items-center justify-center border-r border-b border-border shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.1)]"
-        >
-          Zeit
-        </div>
-        {/* Court headers */}
+          className="sticky left-0 top-0 z-30 bg-white"
+          style={{ width: 52 }}
+        />
+        {/* Court headers — navy-muted (#3B5998) */}
         {courts.map(c => (
           <div
             key={c}
-            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-club-navy text-white border-b border-club-gold/30 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.15)]"
+            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm text-white"
+            style={{
+              background: 'hsl(var(--club-navy-muted))',
+              padding: '9px 6px',
+              borderRadius: 8,
+              letterSpacing: '0.05em',
+            }}
           >
             Platz {c}
           </div>
@@ -66,9 +72,14 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
         {/* Data rows */}
         {hours.map(hour => (
           <React.Fragment key={hour}>
-            {/* Time label */}
+            {/* Time label — transparent bg, refined gray text */}
             <div
-              className="sticky left-0 z-10 bg-card text-[#4A4A4A] text-xs font-medium p-2 flex items-center justify-center border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+              className="sticky left-0 z-10 bg-white text-xs font-normal flex items-center justify-end pr-2.5"
+              style={{
+                color: '#5A7088',
+                fontVariantNumeric: 'tabular-nums',
+                width: 52,
+              }}
             >
               {String(hour).padStart(2, '0')}:00
             </div>
@@ -110,8 +121,8 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
 
   if (!booking) {
     return (
-      <div className="court-cell court-cell-empty hover:shadow-md" onClick={onClick}>
-        <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+      <div className="court-cell court-cell-empty" onClick={onClick}>
+        <div className="h-full flex items-center justify-center text-xs" style={{ color: 'hsl(var(--slot-free-text))' }}>
           Frei
         </div>
       </div>
@@ -130,17 +141,17 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
 
   if (booking.booking_type === 'half' && !booking.is_joined) {
     return (
-      <div className="court-cell overflow-hidden cursor-pointer hover:shadow-md" onClick={onClick}>
+      <div className="court-cell court-cell-half overflow-hidden cursor-pointer" onClick={onClick}>
         <div className="h-full flex">
           {/* Left half - booked */}
-          <div className="w-1/2 bg-court-half flex flex-col items-center justify-center p-1 border-r border-dashed border-club-gold">
-            <User className="w-4 h-4 text-foreground" />
-            <span className="text-[10px] font-medium mt-0.5 text-foreground">{anonymizeName(booking.booker_vorname)}</span>
+          <div className="w-1/2 flex flex-col items-center justify-center p-1" style={{ borderRight: '1px dashed hsl(var(--slot-half-border))' }}>
+            <User className="w-4 h-4 text-accent-foreground" />
+            <span className="text-[10px] font-medium mt-0.5 text-accent-foreground">{anonymizeName(booking.booker_vorname)}</span>
           </div>
-          {/* Right half - open */}
-          <div className="w-1/2 bg-card flex flex-col items-center justify-center p-1">
-            <UserPlus className="w-4 h-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground mt-0.5">+</span>
+          {/* Right half - open, white bg with golden dashed border visible around cell */}
+          <div className="w-1/2 bg-white flex flex-col items-center justify-center p-1">
+            <UserPlus className="w-4 h-4" style={{ color: 'hsl(var(--slot-free-text))' }} />
+            <span className="text-[10px] mt-0.5" style={{ color: 'hsl(var(--slot-free-text))' }}>+</span>
           </div>
         </div>
       </div>
@@ -152,7 +163,7 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
   const PlayerIcon = isDouble ? Users : UserCheck;
 
   return (
-    <div className="court-cell court-cell-full overflow-hidden cursor-pointer hover:shadow-md" onClick={onClick}>
+    <div className="court-cell court-cell-full overflow-hidden cursor-pointer" onClick={onClick}>
       <div className="h-full flex">
         <div className="w-1/2 flex flex-col items-center justify-center p-1">
           <PlayerIcon className="w-4 h-4" />

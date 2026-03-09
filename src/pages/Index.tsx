@@ -53,24 +53,39 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with navy gradient and gold stripe */}
+      {/* Header with navy gradient */}
       <header className="relative shadow-lg">
         <div
-          className="bg-gradient-to-r from-club-navy via-club-royal to-club-navy"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--club-navy)) 0%, hsl(var(--club-badge-blue)) 55%, hsl(var(--club-royal)) 100%)',
+          }}
         >
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Badge with gold ring */}
-              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 p-0.5">
-                <img
-                  src={clubBadge}
-                  alt="TC Winterbach Wappen"
-                  className="w-full h-full object-contain drop-shadow-[0_0_6px_hsl(43,80%,46%,0.6)]"
-                  style={{ filter: 'drop-shadow(0 0 3px hsl(43 80% 46% / 0.5))' }}
-                />
+              {/* Badge with conic gold ring + enhanced glow */}
+              <div
+                className="flex-shrink-0 rounded-full p-[3px]"
+                style={{
+                  width: 52,
+                  height: 52,
+                  background: 'conic-gradient(hsl(var(--club-gold-stripe)) 0deg, hsl(var(--club-gold)) 90deg, hsl(var(--club-gold-stripe)) 180deg, hsl(var(--club-gold)) 270deg, hsl(var(--club-gold-stripe)) 360deg)',
+                  boxShadow: '0 0 18px 4px hsla(52, 100%, 48%, 0.45), 0 3px 12px rgba(0,0,0,0.35)',
+                }}
+              >
+                <div
+                  className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ background: 'hsl(var(--club-navy))' }}
+                >
+                  <img
+                    src={clubBadge}
+                    alt="TC Winterbach Wappen"
+                    className="w-[110%] h-[110%] object-cover"
+                    style={{ margin: '-5%' }}
+                  />
+                </div>
               </div>
               <h1
-                className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer hover:text-club-gold transition-colors"
+                className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer transition-colors hover:text-yellow-300"
                 onClick={() => { setDate(new Date()); }}
               >
                 Platzbuchung TC Winterbach
@@ -86,8 +101,13 @@ export default function Index() {
             </Button>
           </div>
         </div>
-        {/* Gold decorative stripe */}
-        <div className="h-1 bg-gradient-to-r from-club-gold via-accent to-club-gold" />
+        {/* Metallic gold gradient stripe */}
+        <div
+          className="h-[3px]"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, hsl(var(--club-gold-stripe)) 20%, hsl(var(--club-gold-stripe)) 80%, transparent 100%)',
+          }}
+        />
       </header>
 
       {/* Main Content */}

@@ -49,7 +49,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
       >
         {/* Top-left corner cell */}
         <div
-          className="sticky left-0 top-0 z-30 bg-club-navy text-white text-xs font-semibold p-2 flex items-center justify-center border-r border-b border-club-royal/30 shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.2)]"
+          className="sticky left-0 top-0 z-30 bg-card text-foreground text-xs font-semibold p-2 flex items-center justify-center border-r border-b border-border shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.1)]"
         >
           Zeit
         </div>

@@ -60,11 +60,11 @@ export default function AdminDashboard() {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="members">
-          <TabsList className="mb-4 flex-wrap">
-            <TabsTrigger value="members">Mitglieder</TabsTrigger>
-            <TabsTrigger value="bookings">Buchungen</TabsTrigger>
-            <TabsTrigger value="special">Sonderbuchungen</TabsTrigger>
-            <TabsTrigger value="rules">Regelwerk</TabsTrigger>
+          <TabsList className="mb-4 w-full flex-nowrap overflow-x-auto scrollbar-hide justify-start bg-secondary/60 rounded-lg p-1">
+            <TabsTrigger value="members" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Mitglieder</TabsTrigger>
+            <TabsTrigger value="bookings" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Buchungen</TabsTrigger>
+            <TabsTrigger value="special" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Sonderbuchungen</TabsTrigger>
+            <TabsTrigger value="rules" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Regelwerk</TabsTrigger>
           </TabsList>
 
           <TabsContent value="members"><MembersTab /></TabsContent>

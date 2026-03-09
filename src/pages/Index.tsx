@@ -111,7 +111,7 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <main className="container mx-auto px-4 py-3 space-y-3">
         <DateNavigation date={date} onDateChange={setDate} />
         
         <BookingGrid

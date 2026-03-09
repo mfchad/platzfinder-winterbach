@@ -136,7 +136,7 @@
   .booking-grid-area {
     background: white;
     border-radius: 0 0 18px 18px;
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .court-cell {

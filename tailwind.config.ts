@@ -59,13 +59,14 @@ export default {
           past: "hsl(var(--court-past))",
           header: "hsl(var(--court-header))",
         },
-        wimbledon: {
-          green: "hsl(var(--wimbledon-green))",
-          dark: "hsl(var(--wimbledon-dark))",
-          purple: "hsl(var(--wimbledon-purple))",
-          gold: "hsl(var(--wimbledon-gold))",
-          cream: "hsl(var(--wimbledon-cream))",
-          lawn: "hsl(var(--wimbledon-lawn))",
+        club: {
+          navy: "hsl(var(--club-navy))",
+          royal: "hsl(var(--club-royal))",
+          blue: "hsl(var(--club-blue))",
+          gold: "hsl(var(--club-gold))",
+          "gold-light": "hsl(var(--club-gold-light))",
+          cream: "hsl(var(--club-cream))",
+          ruby: "hsl(var(--club-ruby))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

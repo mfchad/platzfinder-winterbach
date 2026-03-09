@@ -39,7 +39,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
   const colWidth = courtsCount <= 4 ? 'minmax(100px, 1fr)' : 'minmax(85px, 1fr)';
 
   return (
-    <div className="overflow-auto max-h-[75vh] rounded-md border border-border relative">
+    <div className="overflow-auto max-h-[75vh] rounded-lg border border-border shadow-sm relative">
       <div
         className="grid gap-px bg-border"
         style={{
@@ -47,17 +47,17 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
           minWidth: `${60 + courtsCount * 85}px`,
         }}
       >
-        {/* Top-left corner cell (sticky both ways) */}
+        {/* Top-left corner cell */}
         <div
-          className="sticky left-0 top-0 z-30 bg-background text-xs font-semibold text-muted-foreground p-2 flex items-center justify-center border-r border-b border-border shadow-[2px_2px_4px_-2px_hsl(var(--border))]"
+          className="sticky left-0 top-0 z-30 bg-club-navy text-white text-xs font-semibold p-2 flex items-center justify-center border-r border-b border-club-royal/30 shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.2)]"
         >
           Zeit
         </div>
-        {/* Header row (sticky top) */}
+        {/* Court headers */}
         {courts.map(c => (
           <div
             key={c}
-            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-court-header text-primary-foreground border-b border-border shadow-[0_2px_4px_-2px_hsl(var(--border))]"
+            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-court-header text-white border-b border-club-royal/30 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.15)]"
           >
             Platz {c}
           </div>
@@ -66,9 +66,9 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
         {/* Data rows */}
         {hours.map(hour => (
           <React.Fragment key={hour}>
-            {/* Time label (sticky left) */}
+            {/* Time label */}
             <div
-              className="sticky left-0 z-10 bg-background text-xs font-medium text-muted-foreground p-2 flex items-center justify-center border-r border-border shadow-[2px_0_4px_-2px_hsl(var(--border))]"
+              className="sticky left-0 z-10 bg-club-navy text-white text-xs font-medium p-2 flex items-center justify-center border-r border-club-royal/30 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]"
             >
               {String(hour).padStart(2, '0')}:00
             </div>
@@ -133,12 +133,12 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
       <div className="court-cell overflow-hidden cursor-pointer hover:shadow-md" onClick={onClick}>
         <div className="h-full flex">
           {/* Left half - booked */}
-          <div className="w-1/2 bg-court-half flex flex-col items-center justify-center p-1">
+          <div className="w-1/2 bg-court-half flex flex-col items-center justify-center p-1 border-r border-dashed border-club-gold">
             <User className="w-4 h-4 text-foreground" />
             <span className="text-[10px] font-medium mt-0.5 text-foreground">{anonymizeName(booking.booker_vorname)}</span>
           </div>
           {/* Right half - open */}
-          <div className="w-1/2 bg-card flex flex-col items-center justify-center p-1 border-l border-dashed border-border">
+          <div className="w-1/2 bg-card flex flex-col items-center justify-center p-1">
             <UserPlus className="w-4 h-4 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground mt-0.5">+</span>
           </div>
@@ -158,7 +158,7 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
           <PlayerIcon className="w-4 h-4" />
           <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.booker_vorname)}</span>
         </div>
-        <div className="w-1/2 flex flex-col items-center justify-center p-1 border-l border-primary-foreground/20">
+        <div className="w-1/2 flex flex-col items-center justify-center p-1 border-l border-white/20">
           <PlayerIcon className="w-4 h-4" />
           {booking.is_joined && booking.partner_vorname && (
             <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.partner_vorname)}</span>

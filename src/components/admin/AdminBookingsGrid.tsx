@@ -567,15 +567,18 @@ function YearGrid({ bookings, date, onDrillDown }: { bookings: Booking[]; date: 
 }
 
 // ===== Shared components =====
-function AdminSlotCell({ booking, onDeleteClick, onCellClick }: {
+function AdminSlotCell({ booking, onDeleteClick, onCellClick, onEmptyClick }: {
   booking?: Booking;
   onDeleteClick: (b: Booking) => void;
   onCellClick: (b: Booking) => void;
+  onEmptyClick?: () => void;
 }) {
   if (!booking) {
     return (
-      <div className="court-cell court-cell-empty cursor-default">
-        <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Frei</div>
+      <div className="court-cell court-cell-empty cursor-pointer hover:bg-muted/50 hover:border-primary/30 transition-all" onClick={() => onEmptyClick?.()}>
+        <div className="h-full flex items-center justify-center text-xs text-muted-foreground gap-1">
+          <Plus className="w-3 h-3" /> Frei
+        </div>
       </div>
     );
   }

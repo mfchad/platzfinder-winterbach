@@ -39,7 +39,14 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
   const colWidth = courtsCount <= 4 ? 'minmax(100px, 1fr)' : 'minmax(85px, 1fr)';
 
   return (
-    <div className="booking-grid-area overflow-auto rounded-xl shadow-lg relative" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+    <div
+      className="booking-grid-area overflow-auto rounded-xl shadow-lg"
+      style={{
+        maxHeight: 'calc(100vh - 180px)',
+        position: 'relative',
+        isolation: 'isolate',
+      }}
+    >
       <div
         className="grid"
         style={{
@@ -48,12 +55,17 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
           gap: '4px',
         }}
       >
-        {/* Top-left corner cell */}
+        {/* Top-left corner shield */}
         <div
-          className="sticky left-0 top-0 bg-white"
-          style={{ width: 52, zIndex: 40 }}
+          className="sticky left-0 top-0"
+          style={{
+            width: 52,
+            zIndex: 50,
+            background: '#FFFFFF',
+            boxShadow: '2px 2px 4px rgba(0,0,0,0.06)',
+          }}
         />
-        {/* Court headers — navy-muted (#3B5998) */}
+        {/* Court headers */}
         {courts.map(c => (
           <div
             key={c}
@@ -64,6 +76,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
               borderRadius: 8,
               letterSpacing: '0.05em',
               zIndex: 30,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
             }}
           >
             Platz {c}
@@ -73,14 +86,16 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
         {/* Data rows */}
         {hours.map(hour => (
           <React.Fragment key={hour}>
-            {/* Time label — transparent bg, refined gray text */}
+            {/* Time label */}
             <div
-              className="sticky left-0 bg-white text-xs font-normal flex items-center justify-end pr-2.5"
+              className="sticky left-0 text-xs font-normal flex items-center justify-end pr-2.5"
               style={{
-                color: '#5A7088',
+                background: '#FFFFFF',
+                color: '#4A4A4A',
                 fontVariantNumeric: 'tabular-nums',
                 width: 52,
                 zIndex: 20,
+                boxShadow: '2px 0 4px rgba(0,0,0,0.04)',
               }}
             >
               {String(hour).padStart(2, '0')}:00

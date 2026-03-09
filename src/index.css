@@ -143,6 +143,8 @@
     @apply transition-all duration-150 cursor-pointer;
     min-height: 3rem;
     border-radius: 8px;
+    position: relative;
+    z-index: 0;
   }
   @media (min-width: 640px) {
     .court-cell {

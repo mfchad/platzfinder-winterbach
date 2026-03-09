@@ -21,7 +21,10 @@ export function isWithinBookingWindow(date: string, hour: number, rules: Record<
   const slotTime = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
   const now = new Date();
   const diffMs = slotTime.getTime() - now.getTime();
+  const diffMinutes = diffMs / (1000 * 60);
   const diffHours = diffMs / (1000 * 60 * 60);
+  // Grace period: allow booking current hour if within first 45 minutes
+  if (diffMinutes >= -45 && diffMinutes <= 0) return true;
   // Slot must be in the future and within the booking window
   return diffHours > 0 && diffHours <= windowHours;
 }

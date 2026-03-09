@@ -57,7 +57,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
         {courts.map(c => (
           <div
             key={c}
-            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-court-header text-white border-b border-club-royal/30 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.15)]"
+            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-club-navy text-white border-b border-club-gold/30 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.15)]"
           >
             Platz {c}
           </div>

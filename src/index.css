@@ -7,7 +7,7 @@
 @layer base {
   :root {
     /* Club badge-inspired palette: Navy / Royal Blue / Gold */
-    --background: 220 25% 93%;
+    --background: 220 30% 93%;
     --foreground: 220 40% 13%;
 
     --card: 0 0% 100%;
@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 40% 13%;
 
-    /* Deep navy blue */
-    --primary: 220 60% 22%;
+    /* Deep midnight blue */
+    --primary: 220 65% 15%;
     --primary-foreground: 45 80% 95%;
 
     /* Light blue-grey */
@@ -27,8 +27,8 @@
     --muted: 215 15% 94%;
     --muted-foreground: 220 15% 42%;
 
-    /* Gold accent */
-    --accent: 45 85% 50%;
+    /* Vibrant metallic gold #D4A017 → hsl(43, 80%, 46%) */
+    --accent: 43 80% 46%;
     --accent-foreground: 220 60% 15%;
 
     --destructive: 0 72% 50%;
@@ -42,21 +42,20 @@
 
     /* Court tokens */
     --court-empty: 0 0% 100%;
-    --court-half: 45 70% 88%;
-    --court-full: 215 55% 52%;
-    --court-special: 345 55% 35%;
+    --court-half: 43 75% 70%;
+    --court-full: 220 72% 35%;
+    --court-special: 348 60% 28%;
     --court-past: 220 10% 93%;
-    --court-header: 215 45% 45%;
+    --court-header: 220 55% 32%;
 
     /* Club brand tokens */
-    --club-navy: 220 60% 22%;
-    --club-royal: 220 65% 35%;
-    --club-blue: 215 55% 52%;
-    --club-gold: 45 85% 50%;
-    --club-gold-light: 45 70% 88%;
-    --club-cream: 220 25% 93%;
-    --club-ruby: 345 55% 35%;
-
+    --club-navy: 220 65% 15%;
+    --club-royal: 220 55% 32%;
+    --club-blue: 215 60% 45%;
+    --club-gold: 43 80% 46%;
+    --club-gold-light: 43 75% 70%;
+    --club-cream: 220 30% 93%;
+    --club-ruby: 348 60% 28%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 220 60% 22%;
@@ -138,8 +137,8 @@
     box-shadow: inset 0 0 0 1px hsl(var(--club-royal) / 0.3);
   }
   .court-cell-half {
-    background: hsl(var(--court-half));
-    border: 1.5px dashed hsl(var(--club-gold));
+    background: hsl(43 75% 70%);
+    border: 2px dashed hsl(43 80% 46%);
   }
   .court-cell-full {
     background: linear-gradient(135deg, hsl(var(--club-blue)), hsl(var(--club-royal)));

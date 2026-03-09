@@ -49,7 +49,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
       >
         {/* Top-left corner cell */}
         <div
-          className="sticky left-0 top-0 z-30 bg-club-navy text-white text-xs font-semibold p-2 flex items-center justify-center border-r border-b border-club-royal/30 shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.2)]"
+          className="sticky left-0 top-0 z-30 bg-card text-foreground text-xs font-semibold p-2 flex items-center justify-center border-r border-b border-border shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.1)]"
         >
           Zeit
         </div>
@@ -57,7 +57,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
         {courts.map(c => (
           <div
             key={c}
-            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-court-header text-white border-b border-club-royal/30 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.15)]"
+            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm p-2 bg-club-navy text-white border-b border-club-gold/30 shadow-[0_2px_4px_-2px_rgba(0,0,0,0.15)]"
           >
             Platz {c}
           </div>
@@ -68,7 +68,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
           <React.Fragment key={hour}>
             {/* Time label */}
             <div
-              className="sticky left-0 z-10 bg-club-navy text-white text-xs font-medium p-2 flex items-center justify-center border-r border-club-royal/30 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]"
+              className="sticky left-0 z-10 bg-card text-[#4A4A4A] text-xs font-medium p-2 flex items-center justify-center border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
             >
               {String(hour).padStart(2, '0')}:00
             </div>

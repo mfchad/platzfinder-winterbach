@@ -187,6 +187,7 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
                   booking={booking}
                   onDeleteClick={(b) => setDeleteTarget(b)}
                   onCellClick={(b) => openEdit(b)}
+                  onEmptyClick={() => openCreate(court, hour)}
                 />
               );
             })}

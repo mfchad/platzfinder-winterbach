@@ -39,7 +39,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
   const colWidth = courtsCount <= 4 ? 'minmax(100px, 1fr)' : 'minmax(85px, 1fr)';
 
   return (
-    <div className="booking-grid-area overflow-auto max-h-[75vh] rounded-xl shadow-lg relative">
+    <div className="booking-grid-area overflow-auto rounded-xl shadow-lg relative" style={{ maxHeight: 'calc(100vh - 180px)' }}>
       <div
         className="grid"
         style={{
@@ -50,19 +50,20 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
       >
         {/* Top-left corner cell */}
         <div
-          className="sticky left-0 top-0 z-30 bg-white"
-          style={{ width: 52 }}
+          className="sticky left-0 top-0 bg-white"
+          style={{ width: 52, zIndex: 40 }}
         />
         {/* Court headers — navy-muted (#3B5998) */}
         {courts.map(c => (
           <div
             key={c}
-            className="sticky top-0 z-20 text-center font-display font-semibold text-xs sm:text-sm text-white"
+            className="sticky top-0 text-center font-display font-semibold text-xs sm:text-sm text-white"
             style={{
               background: 'hsl(var(--club-navy-muted))',
               padding: '9px 6px',
               borderRadius: 8,
               letterSpacing: '0.05em',
+              zIndex: 30,
             }}
           >
             Platz {c}
@@ -74,11 +75,12 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
           <React.Fragment key={hour}>
             {/* Time label — transparent bg, refined gray text */}
             <div
-              className="sticky left-0 z-10 bg-white text-xs font-normal flex items-center justify-end pr-2.5"
+              className="sticky left-0 bg-white text-xs font-normal flex items-center justify-end pr-2.5"
               style={{
                 color: '#5A7088',
                 fontVariantNumeric: 'tabular-nums',
                 width: 52,
+                zIndex: 20,
               }}
             >
               {String(hour).padStart(2, '0')}:00

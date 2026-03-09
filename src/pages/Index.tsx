@@ -62,28 +62,18 @@ export default function Index() {
         >
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Badge with conic gold ring + enhanced glow */}
-              <div
-                className="flex-shrink-0 rounded-full p-[3px]"
+              {/* Badge with contoured golden glow */}
+              <img
+                src={clubBadge}
+                alt="TC Winterbach Wappen"
+                className="flex-shrink-0"
                 style={{
-                  width: 52,
-                  height: 52,
-                  background: 'conic-gradient(hsl(var(--club-gold-stripe)) 0deg, hsl(var(--club-gold)) 90deg, hsl(var(--club-gold-stripe)) 180deg, hsl(var(--club-gold)) 270deg, hsl(var(--club-gold-stripe)) 360deg)',
-                  boxShadow: '0 0 18px 4px hsla(52, 100%, 48%, 0.45), 0 3px 12px rgba(0,0,0,0.35)',
+                  width: 48,
+                  height: 48,
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 0 6px hsl(var(--club-gold))) drop-shadow(0 0 14px hsla(38, 63%, 46%, 0.6))',
                 }}
-              >
-                <div
-                  className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
-                  style={{ background: 'hsl(var(--club-navy))' }}
-                >
-                  <img
-                    src={clubBadge}
-                    alt="TC Winterbach Wappen"
-                    className="w-[110%] h-[110%] object-cover"
-                    style={{ margin: '-5%' }}
-                  />
-                </div>
-              </div>
+              />
               <h1
                 className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer transition-colors hover:text-yellow-300"
                 onClick={() => { setDate(new Date()); }}

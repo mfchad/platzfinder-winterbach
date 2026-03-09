@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
-import { User, Users, UserPlus, UserCheck, Trash2, Loader2 } from "lucide-react";
+import { User, Users, UserPlus, UserCheck, Trash2, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
 import { verifyMember } from "@/lib/booking-validation";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdminBookingsGridProps {
   bookings: Booking[];

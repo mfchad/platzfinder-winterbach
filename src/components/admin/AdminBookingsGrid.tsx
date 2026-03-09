@@ -38,9 +38,10 @@ export default function AdminBookingsGrid({
 }
 
 // ===== Day Grid =====
-function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, onUpdate }: {
+function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, onUpdate, onReload }: {
   bookings: Booking[]; date: Date; startHour: number; endHour: number; courtsCount: number; onDelete: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Booking>) => void;
+  onReload?: () => void;
 }) {
   const hours = useMemo(() => Array.from({ length: endHour - startHour }, (_, i) => i + startHour), [startHour, endHour]);
   const courts = useMemo(() => Array.from({ length: courtsCount }, (_, i) => i + 1), [courtsCount]);

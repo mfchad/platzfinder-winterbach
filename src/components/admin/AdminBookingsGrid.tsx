@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
-import { User, Users, UserPlus, UserCheck, Trash2, Loader2 } from "lucide-react";
+import { User, Users, UserPlus, UserCheck, Trash2, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
 import { verifyMember } from "@/lib/booking-validation";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdminBookingsGridProps {
   bookings: Booking[];
@@ -23,21 +25,23 @@ interface AdminBookingsGridProps {
   onDelete: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Booking>) => void;
   onDrillDown?: (date: Date, scale: "day" | "week" | "month") => void;
+  onReload?: () => void;
 }
 
 export default function AdminBookingsGrid({
-  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onUpdate, onDrillDown,
+  bookings, date, timeScale, startHour, endHour, courtsCount, onDelete, onUpdate, onDrillDown, onReload,
 }: AdminBookingsGridProps) {
   if (timeScale === "month") return <MonthGrid bookings={bookings} date={date} onDrillDown={(d) => onDrillDown?.(d, "day")} />;
   if (timeScale === "year") return <YearGrid bookings={bookings} date={date} onDrillDown={onDrillDown} />;
   if (timeScale === "week") return <WeekGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onDrillDown={(d) => onDrillDown?.(d, "day")} />;
-  return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onUpdate={onUpdate} />;
+  return <DayGrid bookings={bookings} date={date} startHour={startHour} endHour={endHour} courtsCount={courtsCount} onDelete={onDelete} onUpdate={onUpdate} onReload={onReload} />;
 }
 
 // ===== Day Grid =====
-function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, onUpdate }: {
+function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, onUpdate, onReload }: {
   bookings: Booking[]; date: Date; startHour: number; endHour: number; courtsCount: number; onDelete: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Booking>) => void;
+  onReload?: () => void;
 }) {
   const hours = useMemo(() => Array.from({ length: endHour - startHour }, (_, i) => i + startHour), [startHour, endHour]);
   const courts = useMemo(() => Array.from({ length: courtsCount }, (_, i) => i + 1), [courtsCount]);
@@ -57,6 +61,76 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
   const [editType, setEditType] = useState("");
   const [showEditDeleteConfirm, setShowEditDeleteConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Admin create booking state
+  const [createSlot, setCreateSlot] = useState<{ court: number; hour: number } | null>(null);
+  const [createVorname, setCreateVorname] = useState("");
+  const [createNachname, setCreateNachname] = useState("");
+  const [createGeburtsjahr, setCreateGeburtsjahr] = useState("");
+  const [createType, setCreateType] = useState<string>("full");
+  const [createComment, setCreateComment] = useState("");
+  const [createDoubleNames, setCreateDoubleNames] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const openCreate = (court: number, hour: number) => {
+    setCreateSlot({ court, hour });
+    setCreateVorname(""); setCreateNachname(""); setCreateGeburtsjahr("");
+    setCreateType("full"); setCreateComment(""); setCreateDoubleNames("");
+  };
+
+  const handleCreate = async () => {
+    if (!createSlot) return;
+    if (!createVorname.trim() || !createNachname.trim() || !createGeburtsjahr.trim()) {
+      toast.error("Bitte alle Felder ausfüllen."); return;
+    }
+    const gj = parseInt(createGeburtsjahr, 10);
+    if (isNaN(gj) || gj < 1920 || gj > 2020) {
+      toast.error("Bitte ein gültiges Geburtsjahr eingeben."); return;
+    }
+    setCreating(true);
+    try {
+      const valid = await verifyMember(createVorname, createNachname, gj);
+      if (!valid) { toast.error("Kein Mitglied mit diesen Daten gefunden."); setCreating(false); return; }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("Nicht angemeldet."); setCreating(false); return; }
+
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('create-booking', {
+        body: {
+          court_number: createSlot.court,
+          date: dateStr,
+          start_hour: createSlot.hour,
+          booking_type: createType,
+          booker_vorname: createVorname.trim(),
+          booker_nachname: createNachname.trim(),
+          booker_geburtsjahr: gj,
+          booker_comment: createType === 'half' ? createComment : undefined,
+          double_match_names: createType === 'double' ? createDoubleNames : undefined,
+          created_by_admin: true,
+        },
+      });
+
+      if (fnError) {
+        let errorMsg = "Buchung fehlgeschlagen.";
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json();
+            errorMsg = body?.error || errorMsg;
+          }
+        } catch { errorMsg = fnError.message || errorMsg; }
+        throw new Error(errorMsg);
+      }
+      if (fnData?.error) throw new Error(fnData.error);
+
+      toast.success("Buchung erstellt!");
+      setCreateSlot(null);
+      onReload?.();
+    } catch (e: any) {
+      toast.error(e.message || "Buchung fehlgeschlagen.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const openEdit = (booking: Booking) => {
     setEditTarget(booking);
@@ -113,6 +187,7 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
                   booking={booking}
                   onDeleteClick={(b) => setDeleteTarget(b)}
                   onCellClick={(b) => openEdit(b)}
+                  onEmptyClick={() => openCreate(court, hour)}
                 />
               );
             })}
@@ -216,6 +291,66 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Create Booking Dialog */}
+      <Dialog open={!!createSlot} onOpenChange={(open) => !open && setCreateSlot(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              Admin-Buchung — Platz {createSlot?.court}, {String(createSlot?.hour ?? 0).padStart(2, "0")}:00
+            </DialogTitle>
+            <DialogDescription>
+              Diese Buchung umgeht alle Regelwerk-Einschränkungen (24h-Vorlauf, Kernzeit-Limits).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Vorname</Label>
+                <Input value={createVorname} onChange={e => setCreateVorname(e.target.value)} placeholder="Max" />
+              </div>
+              <div>
+                <Label>Nachname</Label>
+                <Input value={createNachname} onChange={e => setCreateNachname(e.target.value)} placeholder="Mustermann" />
+              </div>
+            </div>
+            <div>
+              <Label>Geburtsjahr</Label>
+              <Input type="number" value={createGeburtsjahr} onChange={e => setCreateGeburtsjahr(e.target.value)} placeholder="1984" />
+            </div>
+            <div>
+              <Label>Buchungstyp</Label>
+              <Select value={createType} onValueChange={setCreateType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full">Einzel</SelectItem>
+                  <SelectItem value="half">Halbbuchung</SelectItem>
+                  <SelectItem value="double">Doppel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {createType === "half" && (
+              <div>
+                <Label>Kommentar</Label>
+                <Textarea value={createComment} onChange={e => setCreateComment(e.target.value)} placeholder="Optional" rows={2} />
+              </div>
+            )}
+            {createType === "double" && (
+              <div>
+                <Label>Mitspieler-Namen</Label>
+                <Textarea value={createDoubleNames} onChange={e => setCreateDoubleNames(e.target.value)} placeholder="Namen der anderen 3 Spieler" rows={2} />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateSlot(null)}>Abbrechen</Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Buchen
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -432,15 +567,18 @@ function YearGrid({ bookings, date, onDrillDown }: { bookings: Booking[]; date: 
 }
 
 // ===== Shared components =====
-function AdminSlotCell({ booking, onDeleteClick, onCellClick }: {
+function AdminSlotCell({ booking, onDeleteClick, onCellClick, onEmptyClick }: {
   booking?: Booking;
   onDeleteClick: (b: Booking) => void;
   onCellClick: (b: Booking) => void;
+  onEmptyClick?: () => void;
 }) {
   if (!booking) {
     return (
-      <div className="court-cell court-cell-empty cursor-default">
-        <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Frei</div>
+      <div className="court-cell court-cell-empty cursor-pointer hover:bg-muted/50 hover:border-primary/30 transition-all" onClick={() => onEmptyClick?.()}>
+        <div className="h-full flex items-center justify-center text-xs text-muted-foreground gap-1">
+          <Plus className="w-3 h-3" /> Frei
+        </div>
       </div>
     );
   }

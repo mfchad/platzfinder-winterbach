@@ -154,6 +154,7 @@ export default function AdminBookingsTab() {
             onDelete={deleteBooking}
             onUpdate={updateBooking}
             onDrillDown={handleDrillDown}
+            onReload={loadBookings}
           />
         ) : (
           <AdminBookingsList

@@ -61,9 +61,12 @@ export default {
         },
         club: {
           navy: "hsl(var(--club-navy))",
+          "badge-blue": "hsl(var(--club-badge-blue))",
           royal: "hsl(var(--club-royal))",
           blue: "hsl(var(--club-blue))",
+          "navy-muted": "hsl(var(--club-navy-muted))",
           gold: "hsl(var(--club-gold))",
+          "gold-stripe": "hsl(var(--club-gold-stripe))",
           "gold-light": "hsl(var(--club-gold-light))",
           cream: "hsl(var(--club-cream))",
           ruby: "hsl(var(--club-ruby))",

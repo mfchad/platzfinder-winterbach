@@ -78,7 +78,7 @@ export default function Index() {
                 className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer transition-colors hover:text-yellow-300"
                 onClick={() => {setDate(new Date());}}>
                 
-                Platzbuchung TC Winterbach e.V. 1973  
+                Platzbuchung Tennisclub Winterbach e.V. 1973  
               </h1>
             </div>
             <Button

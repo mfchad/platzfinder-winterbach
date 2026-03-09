@@ -61,11 +61,12 @@ export default function Index() {
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Badge with gold ring */}
-              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-club-gold bg-card/10 p-0.5 shadow-md">
+              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 p-0.5">
                 <img
                   src={clubBadge}
                   alt="TC Winterbach Wappen"
-                  className="w-full h-full object-contain rounded-full"
+                  className="w-full h-full object-contain drop-shadow-[0_0_6px_hsl(43,80%,46%,0.6)]"
+                  style={{ filter: 'drop-shadow(0 0 3px hsl(43 80% 46% / 0.5))' }}
                 />
               </div>
               <h1

@@ -68,7 +68,7 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
           <React.Fragment key={hour}>
             {/* Time label */}
             <div
-              className="sticky left-0 z-10 bg-club-navy text-white text-xs font-medium p-2 flex items-center justify-center border-r border-club-royal/30 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]"
+              className="sticky left-0 z-10 bg-card text-[#4A4A4A] text-xs font-medium p-2 flex items-center justify-center border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
             >
               {String(hour).padStart(2, '0')}:00
             </div>

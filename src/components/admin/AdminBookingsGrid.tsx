@@ -62,6 +62,76 @@ function DayGrid({ bookings, date, startHour, endHour, courtsCount, onDelete, on
   const [showEditDeleteConfirm, setShowEditDeleteConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Admin create booking state
+  const [createSlot, setCreateSlot] = useState<{ court: number; hour: number } | null>(null);
+  const [createVorname, setCreateVorname] = useState("");
+  const [createNachname, setCreateNachname] = useState("");
+  const [createGeburtsjahr, setCreateGeburtsjahr] = useState("");
+  const [createType, setCreateType] = useState<string>("full");
+  const [createComment, setCreateComment] = useState("");
+  const [createDoubleNames, setCreateDoubleNames] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const openCreate = (court: number, hour: number) => {
+    setCreateSlot({ court, hour });
+    setCreateVorname(""); setCreateNachname(""); setCreateGeburtsjahr("");
+    setCreateType("full"); setCreateComment(""); setCreateDoubleNames("");
+  };
+
+  const handleCreate = async () => {
+    if (!createSlot) return;
+    if (!createVorname.trim() || !createNachname.trim() || !createGeburtsjahr.trim()) {
+      toast.error("Bitte alle Felder ausfüllen."); return;
+    }
+    const gj = parseInt(createGeburtsjahr, 10);
+    if (isNaN(gj) || gj < 1920 || gj > 2020) {
+      toast.error("Bitte ein gültiges Geburtsjahr eingeben."); return;
+    }
+    setCreating(true);
+    try {
+      const valid = await verifyMember(createVorname, createNachname, gj);
+      if (!valid) { toast.error("Kein Mitglied mit diesen Daten gefunden."); setCreating(false); return; }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("Nicht angemeldet."); setCreating(false); return; }
+
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('create-booking', {
+        body: {
+          court_number: createSlot.court,
+          date: dateStr,
+          start_hour: createSlot.hour,
+          booking_type: createType,
+          booker_vorname: createVorname.trim(),
+          booker_nachname: createNachname.trim(),
+          booker_geburtsjahr: gj,
+          booker_comment: createType === 'half' ? createComment : undefined,
+          double_match_names: createType === 'double' ? createDoubleNames : undefined,
+          created_by_admin: true,
+        },
+      });
+
+      if (fnError) {
+        let errorMsg = "Buchung fehlgeschlagen.";
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json();
+            errorMsg = body?.error || errorMsg;
+          }
+        } catch { errorMsg = fnError.message || errorMsg; }
+        throw new Error(errorMsg);
+      }
+      if (fnData?.error) throw new Error(fnData.error);
+
+      toast.success("Buchung erstellt!");
+      setCreateSlot(null);
+      onReload?.();
+    } catch (e: any) {
+      toast.error(e.message || "Buchung fehlgeschlagen.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const openEdit = (booking: Booking) => {
     setEditTarget(booking);
     setEditVorname(booking.booker_vorname);

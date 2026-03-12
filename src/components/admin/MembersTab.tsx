@@ -551,7 +551,7 @@ export default function MembersTab() {
                       const stickyClass = field === "vorname"
                         ? "sticky left-0 z-10 bg-inherit"
                         : field === "nachname"
-                        ? "sticky left-[120px] z-10 bg-inherit border-r border-border/40"
+                        ? "sticky left-[120px] z-10 bg-inherit border-r border-slate-100"
                         : "";
 
                       return (

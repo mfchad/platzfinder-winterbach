@@ -542,9 +542,9 @@ export default function MembersTab() {
                 return (
                   <TableRow
                     key={m.id}
-                    className={`transition-colors ${
+                    className={`transition-colors border-b border-slate-100 ${
                       isMarkedForDeletion ? "bg-destructive/5 opacity-60" :
-                      isDirty ? "bg-[hsl(var(--club-gold-light))]" : ""
+                      isDirty ? "bg-[hsl(var(--club-gold-light))]" : "bg-white"
                     }`}
                   >
                     {(["vorname", "nachname", "geburtsjahr", "email"] as const).map((field) => {

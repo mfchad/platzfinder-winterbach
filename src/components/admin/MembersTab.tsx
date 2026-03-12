@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,12 +17,14 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Upload, Save, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { Trash2, Plus, Upload, Save, AlertTriangle, FileSpreadsheet, Search, ChevronDown, Pencil, Undo2, Mail, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from "xlsx";
 import type { Member } from "@/lib/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const PAGE_SIZE = 50;
 
@@ -52,8 +54,10 @@ export default function MembersTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingSearch, setPendingSearch] = useState("");
   const [showSearchWarning, setShowSearchWarning] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("members").select("*").order("nachname");
@@ -93,19 +97,16 @@ export default function MembersTab() {
   const parseSheetData = (sheet: XLSX.WorkSheet) => {
     const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
     if (json.length === 0) return [];
-
     const headers = Object.keys(json[0]);
     const colMap: Record<string, string> = {};
     for (const h of headers) {
       const normalized = h.toLowerCase().trim();
       if (HEADER_MAP[normalized]) colMap[HEADER_MAP[normalized]] = h;
     }
-
     if (!colMap.vorname || !colMap.nachname) {
       toast({ title: "Fehler", description: "Spalten 'Vorname' und 'Nachname' nicht gefunden.", variant: "destructive" });
       return [];
     }
-
     return json.map(row => ({
       vorname: String(row[colMap.vorname] || "").trim(),
       nachname: String(row[colMap.nachname] || "").trim(),
@@ -157,29 +158,9 @@ export default function MembersTab() {
     load();
   };
 
-  const seedDummyMembers = async () => {
-    const dummies = Array.from({ length: 100 }, (_, i) => ({
-      vorname: `Test${i + 1}`,
-      nachname: `User${i + 1}`,
-      geburtsjahr: 1950 + Math.floor(Math.random() * 61),
-      email: `dummy-test-testuser${i + 1}@example.com`,
-    }));
-    const { error } = await supabase.from("members").insert(dummies);
-    if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Erfolg", description: "100 Dummy-Mitglieder erstellt." });
-    load();
-  };
-
-  const cleanupDummyMembers = async () => {
-    const { error } = await supabase.from("members").delete().like("email", "%dummy-test%");
-    if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Erfolg", description: "Dummy-Daten gelöscht." });
-    load();
-  };
-
   const filtered = useMemo(() =>
     members.filter(m =>
-      !search || `${m.vorname} ${m.nachname}`.toLowerCase().includes(search.toLowerCase())
+      !search || `${m.vorname} ${m.nachname} ${m.email || ""}`.toLowerCase().includes(search.toLowerCase())
     ), [members, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -188,7 +169,6 @@ export default function MembersTab() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, currentPage]);
 
-  // Reset page when search changes
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const hasDirty = Object.keys(dirtyRows).length > 0;
@@ -248,12 +228,7 @@ export default function MembersTab() {
     field: keyof EditableMember,
     rowIndex: number
   ) => {
-    const fields: (keyof EditableMember)[] = ["vorname", "nachname", "geburtsjahr", "email"];
-    const fieldIdx = fields.indexOf(field);
-
-    if (e.key === "Tab") {
-      // default browser tab behavior works
-    } else if (e.key === "Enter") {
+    if (e.key === "Enter") {
       e.preventDefault();
       const nextRowIdx = rowIndex + 1;
       if (nextRowIdx < paginatedMembers.length) {
@@ -263,7 +238,6 @@ export default function MembersTab() {
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
-      // Revert this row
       setDirtyRows(prev => {
         const next = { ...prev };
         delete next[memberId];
@@ -275,7 +249,6 @@ export default function MembersTab() {
 
   const saveChanges = async () => {
     let errorCount = 0;
-    // 1. Update dirty rows (excluding pending deletions)
     const updateIds = Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id));
     for (const id of updateIds) {
       const row = dirtyRows[id];
@@ -287,7 +260,6 @@ export default function MembersTab() {
       }).eq("id", id);
       if (error) errorCount++;
     }
-    // 2. Delete pending deletions
     const deleteIds = Array.from(pendingDeletions);
     for (const id of deleteIds) {
       const { error } = await supabase.from("members").delete().eq("id", id);
@@ -316,6 +288,14 @@ export default function MembersTab() {
     if (!checked) { setDirtyRows({}); setPendingDeletions(new Set()); }
   };
 
+  const toggleCardExpanded = (id: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const paginationPages = useMemo(() => {
     const pages: (number | "ellipsis")[] = [];
     if (totalPages <= 7) {
@@ -330,101 +310,229 @@ export default function MembersTab() {
     return pages;
   }, [totalPages, currentPage]);
 
+  const saveButtonLabel = () => {
+    if (hasDirty && !hasPendingDeletions) return `Speichern (${Object.keys(dirtyRows).length})`;
+    if (!hasDirty && hasPendingDeletions) return `Speichern (${pendingDeletions.size} Löschungen)`;
+    if (hasDirty && hasPendingDeletions) return `Speichern (${Object.keys(dirtyRows).length} + ${pendingDeletions.size})`;
+    return "Speichern";
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-display flex items-center justify-between flex-wrap gap-2">
-          <span className="flex items-center gap-2">
-            Mitgliederverwaltung
-            <Badge variant="secondary" className="text-xs font-normal">{members.length} Mitglieder</Badge>
-          </span>
+    <div className="space-y-4">
+      {/* Sticky toolbar */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border pb-3 pt-1 -mx-4 px-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="edit-mode-toggle" className="text-sm font-normal cursor-pointer">
-                Bearbeitungs-Modus
+            <h2 className="font-display text-lg font-bold text-foreground">Mitglieder</h2>
+            <Badge variant="secondary" className="text-xs font-normal bg-muted text-muted-foreground">
+              {members.length}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasUnsavedChanges && (
+              <Button
+                size="sm"
+                onClick={() => setShowSaveConfirm(true)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+              >
+                <Save className="h-4 w-4 mr-1" />
+                {saveButtonLabel()}
+              </Button>
+            )}
+            <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 border transition-colors ${isEditMode ? 'border-[hsl(var(--club-gold))] bg-[hsl(var(--club-gold-light))]' : 'border-border bg-muted/50'}`}>
+              <Label htmlFor="edit-mode-toggle" className="text-sm font-medium cursor-pointer select-none whitespace-nowrap">
+                Bearbeiten
               </Label>
               <Switch
                 id="edit-mode-toggle"
                 checked={isEditMode}
                 onCheckedChange={handleEditModeToggle}
+                className="data-[state=checked]:bg-primary"
               />
             </div>
-            <Button size="sm" variant="outline" onClick={() => setShowBulk(true)}>
-              <Upload className="h-4 w-4 mr-1" /> Bulk Upload
-            </Button>
-            <Button size="sm" variant="outline" onClick={seedDummyMembers} className="border-dashed text-muted-foreground">
-              + 100 Dummy
-            </Button>
-            <Button size="sm" variant="outline" onClick={cleanupDummyMembers} className="border-dashed text-destructive">
-              <Trash2 className="h-4 w-4 mr-1" /> Cleanup Dummy
+            <Button size="sm" variant="outline" onClick={() => setShowBulk(true)} className="text-muted-foreground">
+              <Upload className="h-4 w-4 mr-1" /> Import
             </Button>
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Edit mode warning */}
-        {isEditMode && (
-          <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200">
-              <strong>Achtung:</strong> Sie bearbeiten Stammdaten. Änderungen an E-Mail-Adressen wirken sich auf die Benachrichtigungen und die Zuordnung von Buchungen aus.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Save button */}
-        {hasUnsavedChanges && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setShowSaveConfirm(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Save className="h-4 w-4 mr-1" />
-              Änderungen speichern
-              {hasDirty && !hasPendingDeletions && ` (${Object.keys(dirtyRows).length})`}
-              {!hasDirty && hasPendingDeletions && ` (${pendingDeletions.size} Löschungen)`}
-              {hasDirty && hasPendingDeletions && ` (${Object.keys(dirtyRows).length} + ${pendingDeletions.size} Löschungen)`}
-            </Button>
-          </div>
-        )}
-
-        {/* Add member form */}
-        <div className="flex flex-wrap gap-2 items-end">
-          <div><Label className="text-xs">Vorname*</Label><Input value={vorname} onChange={e => setVorname(e.target.value)} className="w-32" /></div>
-          <div><Label className="text-xs">Nachname*</Label><Input value={nachname} onChange={e => setNachname(e.target.value)} className="w-32" /></div>
-          <div><Label className="text-xs">Geburtsjahr*</Label><Input value={geburtsjahr} onChange={e => setGeburtsjahr(e.target.value)} type="number" className="w-24" /></div>
-          <div><Label className="text-xs">E-Mail</Label><Input value={email} onChange={e => setEmail(e.target.value)} className="w-48" /></div>
-          <Button size="sm" onClick={addMember}><Plus className="h-4 w-4 mr-1" />Hinzufügen</Button>
         </div>
 
-        <Input
-          placeholder="Suchen..."
-          value={showSearchWarning ? search : search}
-          onChange={e => handleSearchChange(e.target.value)}
-          className="max-w-xs"
-        />
+        {/* Search bar */}
+        <div className="mt-3 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Mitglieder suchen…"
+            value={search}
+            onChange={e => handleSearchChange(e.target.value)}
+            className="pl-9 w-full sm:max-w-sm bg-card"
+          />
+        </div>
+      </div>
 
-        {/* Search warning dialog */}
-        <Dialog open={showSearchWarning} onOpenChange={setShowSearchWarning}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="font-display">Ungespeicherte Änderungen</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Sie haben {Object.keys(dirtyRows).length} ungespeicherte Änderung(en). Möchten Sie diese verwerfen und die Suche fortsetzen?
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowSearchWarning(false)}>Abbrechen</Button>
-              <Button variant="destructive" onClick={confirmSearchWithDirty}>Verwerfen & Suchen</Button>
+      {/* Edit mode alert */}
+      {isEditMode && (
+        <Alert className="border-[hsl(var(--club-gold))] bg-[hsl(var(--club-gold-light))]">
+          <AlertTriangle className="h-4 w-4 text-[hsl(var(--club-gold))]" />
+          <AlertDescription className="text-foreground text-sm">
+            <strong>Bearbeitungsmodus aktiv.</strong> Änderungen werden erst nach dem Speichern übernommen.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Add member form */}
+      <Card className="border-border/60">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="flex-1 min-w-[100px]">
+              <Label className="text-xs text-muted-foreground">Vorname*</Label>
+              <Input value={vorname} onChange={e => setVorname(e.target.value)} className="h-9" />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="flex-1 min-w-[100px]">
+              <Label className="text-xs text-muted-foreground">Nachname*</Label>
+              <Input value={nachname} onChange={e => setNachname(e.target.value)} className="h-9" />
+            </div>
+            <div className="w-24">
+              <Label className="text-xs text-muted-foreground">Jahrgang*</Label>
+              <Input value={geburtsjahr} onChange={e => setGeburtsjahr(e.target.value)} type="number" className="h-9" />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <Label className="text-xs text-muted-foreground">E-Mail</Label>
+              <Input value={email} onChange={e => setEmail(e.target.value)} type="email" className="h-9" />
+            </div>
+            <Button size="sm" onClick={addMember} className="h-9 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-1" />Hinzufügen
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Editable table */}
-        <div className="overflow-x-auto relative">
+      {/* Mobile: Card view */}
+      {isMobile ? (
+        <div className="space-y-2">
+          {paginatedMembers.map(m => {
+            const isMarkedForDeletion = pendingDeletions.has(m.id);
+            const isDirty = !!dirtyRows[m.id];
+            const isExpanded = expandedCards.has(m.id);
+
+            return (
+              <Card
+                key={m.id}
+                className={`border transition-all ${
+                  isMarkedForDeletion ? 'opacity-50 border-destructive' :
+                  isDirty ? 'border-[hsl(var(--club-gold))]' :
+                  'border-border/60'
+                }`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium text-sm truncate ${isMarkedForDeletion ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                        {isEditMode && dirtyRows[m.id] ? `${dirtyRows[m.id].vorname} ${dirtyRows[m.id].nachname}` : `${m.vorname} ${m.nachname}`}
+                      </p>
+                      {(m.email || dirtyRows[m.id]?.email) && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          {isEditMode && dirtyRows[m.id] ? dirtyRows[m.id].email : m.email}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isMarkedForDeletion && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Storniert</Badge>
+                      )}
+                      {isEditMode && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleCardExpanded(m.id)}>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </Button>
+                      )}
+                      {!isEditMode && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> {m.geburtsjahr}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded edit area */}
+                  {isEditMode && isExpanded && !isMarkedForDeletion && (
+                    <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Vorname</Label>
+                          <Input
+                            value={getCellValue(m, "vorname")}
+                            onChange={e => handleCellChange(m.id, "vorname", e.target.value, m)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nachname</Label>
+                          <Input
+                            value={getCellValue(m, "nachname")}
+                            onChange={e => handleCellChange(m.id, "nachname", e.target.value, m)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Geburtsjahr</Label>
+                          <Input
+                            type="number"
+                            value={getCellValue(m, "geburtsjahr")}
+                            onChange={e => handleCellChange(m.id, "geburtsjahr", e.target.value, m)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">E-Mail</Label>
+                          <Input
+                            type="email"
+                            value={getCellValue(m, "email")}
+                            onChange={e => handleCellChange(m.id, "email", e.target.value, m)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
+                        onClick={() => togglePendingDeletion(m.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" /> Löschen vormerken
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Undo deletion */}
+                  {isEditMode && isMarkedForDeletion && (
+                    <div className="mt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground w-full"
+                        onClick={() => togglePendingDeletion(m.id)}
+                      >
+                        <Undo2 className="h-4 w-4 mr-1" /> Rückgängig
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        /* Desktop: Table view */
+        <div className={`overflow-x-auto relative rounded-lg border transition-shadow ${isEditMode ? 'shadow-[0_0_0_2px_hsl(var(--club-gold)/0.4)] border-[hsl(var(--club-gold)/0.6)]' : 'border-border/60 shadow-sm'}`}>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="sticky left-0 z-10 bg-background min-w-[120px]">Vorname</TableHead>
-                <TableHead className="sticky left-[120px] z-10 bg-background min-w-[120px] border-r border-border/40">Nachname</TableHead>
-                <TableHead className="min-w-[100px]">Geburtsjahr</TableHead>
-                <TableHead className="min-w-[200px]">E-Mail</TableHead>
-                <TableHead className="w-12"></TableHead>
+              <TableRow className="bg-muted/40">
+                <TableHead className="sticky left-0 z-10 bg-muted/40 min-w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vorname</TableHead>
+                <TableHead className="sticky left-[120px] z-10 bg-muted/40 min-w-[120px] border-r border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nachname</TableHead>
+                <TableHead className="min-w-[100px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Jahrgang</TableHead>
+                <TableHead className="min-w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">E-Mail</TableHead>
+                {isEditMode && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -434,21 +542,20 @@ export default function MembersTab() {
                 return (
                   <TableRow
                     key={m.id}
-                    className={`
-                      ${isDirty && !isMarkedForDeletion ? "border-l-2 border-l-blue-500" : ""}
-                      ${isMarkedForDeletion ? "border-l-2 border-l-destructive opacity-50" : ""}
-                    `}
+                    className={`transition-colors ${
+                      isMarkedForDeletion ? "bg-destructive/5 opacity-60" :
+                      isDirty ? "bg-[hsl(var(--club-gold-light))]" : ""
+                    }`}
                   >
-                    {(["vorname", "nachname", "geburtsjahr", "email"] as const).map((field, colIdx) => {
-                      const isSticky = field === "vorname" || field === "nachname";
+                    {(["vorname", "nachname", "geburtsjahr", "email"] as const).map((field) => {
                       const stickyClass = field === "vorname"
-                        ? "sticky left-0 z-10 bg-background"
+                        ? "sticky left-0 z-10 bg-inherit"
                         : field === "nachname"
-                        ? "sticky left-[120px] z-10 bg-background border-r border-border/40"
+                        ? "sticky left-[120px] z-10 bg-inherit border-r border-border/40"
                         : "";
 
                       return (
-                        <TableCell key={field} className={`${stickyClass}`}>
+                        <TableCell key={field} className={stickyClass}>
                           {isEditMode && !isMarkedForDeletion ? (
                             <Input
                               ref={(el) => { inputRefs.current[`${m.id}-${field}`] = el; }}
@@ -456,182 +563,181 @@ export default function MembersTab() {
                               value={getCellValue(m, field)}
                               onChange={e => handleCellChange(m.id, field, e.target.value, m)}
                               onKeyDown={e => handleKeyDown(e, m.id, field, rowIndex)}
-                              className="h-8 text-sm border-transparent hover:border-muted-foreground/30 focus:border-ring focus:ring-1 focus:ring-ring bg-transparent transition-colors"
+                              className="h-8 text-sm border-transparent hover:border-input focus:border-ring focus:ring-1 focus:ring-ring bg-transparent transition-colors"
                             />
                           ) : (
-                            <span className={isMarkedForDeletion ? "line-through text-muted-foreground" : ""}>
-                              {field === "email" ? (m[field] || "-") : m[field]}
+                            <span className={`text-sm ${isMarkedForDeletion ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                              {field === "email" ? (m[field] || "–") : m[field]}
                             </span>
                           )}
                         </TableCell>
                       );
                     })}
-                    <TableCell>
-                      {isEditMode ? (
+                    {isEditMode && (
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-7 w-7"
                           onClick={() => togglePendingDeletion(m.id)}
-                          title={isMarkedForDeletion ? "Löschung rückgängig machen" : "Zum Löschen vormerken"}
+                          title={isMarkedForDeletion ? "Rückgängig" : "Löschen"}
                         >
-                          <Trash2 className={`h-4 w-4 ${isMarkedForDeletion ? "text-muted-foreground" : "text-destructive"}`} />
+                          {isMarkedForDeletion ? (
+                            <Undo2 className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
+                          )}
                         </Button>
-                      ) : null}
-                      {isMarkedForDeletion && (
-                        <Badge variant="destructive" className="text-[10px] px-1 py-0 ml-1">Storniert</Badge>
-                      )}
-                    </TableCell>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </div>
+      )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {paginationPages.map((page, i) =>
-                page === "ellipsis" ? (
-                  <PaginationItem key={`e-${i}`}><PaginationEllipsis /></PaginationItem>
-                ) : (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={currentPage === page}
-                      onClick={() => setCurrentPage(page as number)}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
-              )}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
-
-        {/* Save confirmation dialog */}
-        <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="font-display">Änderungen speichern</DialogTitle></DialogHeader>
-            <div className="text-sm text-muted-foreground space-y-1">
-              {Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id)).length > 0 && (
-                <p>📝 {Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id)).length} Änderung(en) speichern</p>
-              )}
-              {pendingDeletions.size > 0 && (
-                <p className="text-destructive font-medium">🗑️ {pendingDeletions.size} Mitglied(er) dauerhaft löschen</p>
-              )}
-              <p className="mt-2">Möchten Sie fortfahren?</p>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>Abbrechen</Button>
-              <Button variant={hasPendingDeletions ? "destructive" : "default"} onClick={saveChanges}>
-                {hasPendingDeletions ? "Speichern & Löschen" : "Speichern"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Bulk upload dialog */}
-        <Dialog open={showBulk} onOpenChange={(open) => {
-          setShowBulk(open);
-          if (!open) { setBulkParsedRows([]); setBulkText(""); setBulkFileName(""); setBulkSheetCount(0); }
-        }}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><FileSpreadsheet className="h-5 w-5" /> Mitglieder Import</DialogTitle></DialogHeader>
-
-            {/* Custom file picker */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Excel- oder CSV-Datei hochladen</Label>
-              <input
-                ref={(el) => { inputRefs.current["__file__"] = el; }}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileSelect}
-                className="hidden"
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
               />
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => (inputRefs.current["__file__"] as any)?.click()}
-                  className="gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Excel- oder CSV-Datei auswählen
-                </Button>
-                {bulkFileName && (
-                  <span className="text-sm text-muted-foreground">Datei: <strong>{bulkFileName}</strong></span>
-                )}
-              </div>
-              {bulkSheetCount > 1 && (
-                <p className="text-xs text-muted-foreground">
-                  ℹ️ Die Datei enthält {bulkSheetCount} Blätter – es wird nur das erste Blatt importiert.
-                </p>
-              )}
-            </div>
-
-            {/* CSV text fallback */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Oder CSV-Daten einfügen</Label>
-              <Textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={4}
-                placeholder="Max,Mustermann,1984,max@email.de&#10;Anna,Schmidt,1990" />
-              {bulkText.trim() && bulkParsedRows.length === 0 && (
-                <Button size="sm" variant="outline" onClick={handleBulkCsvParse}>Vorschau laden</Button>
-              )}
-            </div>
-
-            {/* Preview */}
-            {bulkParsedRows.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Vorschau der Import-Daten ({bulkParsedRows.length} Einträge)</Label>
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs py-1 px-2">Vorname</TableHead>
-                        <TableHead className="text-xs py-1 px-2">Nachname</TableHead>
-                        <TableHead className="text-xs py-1 px-2">Geburtsjahr</TableHead>
-                        <TableHead className="text-xs py-1 px-2">E-Mail</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bulkParsedRows.slice(0, 5).map((r, i) => (
-                        <TableRow key={i}>
-                          <TableCell className="text-xs py-1 px-2">{r.vorname}</TableCell>
-                          <TableCell className="text-xs py-1 px-2">{r.nachname}</TableCell>
-                          <TableCell className="text-xs py-1 px-2">{r.geburtsjahr || "-"}</TableCell>
-                          <TableCell className="text-xs py-1 px-2">{r.email || "-"}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                {bulkParsedRows.length > 5 && (
-                  <p className="text-xs text-muted-foreground">… und {bulkParsedRows.length - 5} weitere Einträge</p>
-                )}
-              </div>
+            </PaginationItem>
+            {paginationPages.map((page, i) =>
+              page === "ellipsis" ? (
+                <PaginationItem key={`e-${i}`}><PaginationEllipsis /></PaginationItem>
+              ) : (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    isActive={currentPage === page}
+                    onClick={() => setCurrentPage(page as number)}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              )
             )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
 
-            <Button onClick={handleBulkImport} disabled={bulkParsedRows.length === 0}>
-              {bulkParsedRows.length > 0 ? `Import starten (${bulkParsedRows.length} Mitglieder)` : "Import starten"}
+      {/* Search warning dialog */}
+      <Dialog open={showSearchWarning} onOpenChange={setShowSearchWarning}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Ungespeicherte Änderungen</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Sie haben {Object.keys(dirtyRows).length} ungespeicherte Änderung(en). Möchten Sie diese verwerfen?
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowSearchWarning(false)}>Abbrechen</Button>
+            <Button variant="destructive" onClick={confirmSearchWithDirty}>Verwerfen</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save confirmation dialog */}
+      <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Änderungen speichern</DialogTitle></DialogHeader>
+          <div className="text-sm text-muted-foreground space-y-1">
+            {Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id)).length > 0 && (
+              <p>📝 {Object.keys(dirtyRows).filter(id => !pendingDeletions.has(id)).length} Änderung(en) speichern</p>
+            )}
+            {pendingDeletions.size > 0 && (
+              <p className="text-destructive font-medium">🗑️ {pendingDeletions.size} Mitglied(er) dauerhaft löschen</p>
+            )}
+            <p className="mt-2">Möchten Sie fortfahren?</p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>Abbrechen</Button>
+            <Button variant={hasPendingDeletions ? "destructive" : "default"} onClick={saveChanges}>
+              {hasPendingDeletions ? "Speichern & Löschen" : "Speichern"}
             </Button>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk upload dialog */}
+      <Dialog open={showBulk} onOpenChange={(open) => {
+        setShowBulk(open);
+        if (!open) { setBulkParsedRows([]); setBulkText(""); setBulkFileName(""); setBulkSheetCount(0); }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><FileSpreadsheet className="h-5 w-5" /> Mitglieder Import</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Excel- oder CSV-Datei hochladen</Label>
+            <input
+              ref={(el) => { inputRefs.current["__file__"] = el; }}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="outline" onClick={() => (inputRefs.current["__file__"] as any)?.click()} className="gap-2">
+                <Upload className="h-4 w-4" /> Datei auswählen
+              </Button>
+              {bulkFileName && <span className="text-sm text-muted-foreground">Datei: <strong>{bulkFileName}</strong></span>}
+            </div>
+            {bulkSheetCount > 1 && (
+              <p className="text-xs text-muted-foreground">ℹ️ Die Datei enthält {bulkSheetCount} Blätter – nur das erste wird importiert.</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Oder CSV-Daten einfügen</Label>
+            <Textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={4}
+              placeholder="Max,Mustermann,1984,max@email.de&#10;Anna,Schmidt,1990" />
+            {bulkText.trim() && bulkParsedRows.length === 0 && (
+              <Button size="sm" variant="outline" onClick={handleBulkCsvParse}>Vorschau laden</Button>
+            )}
+          </div>
+          {bulkParsedRows.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Vorschau ({bulkParsedRows.length} Einträge)</Label>
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs py-1 px-2">Vorname</TableHead>
+                      <TableHead className="text-xs py-1 px-2">Nachname</TableHead>
+                      <TableHead className="text-xs py-1 px-2">Jahrgang</TableHead>
+                      <TableHead className="text-xs py-1 px-2">E-Mail</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bulkParsedRows.slice(0, 5).map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-xs py-1 px-2">{r.vorname}</TableCell>
+                        <TableCell className="text-xs py-1 px-2">{r.nachname}</TableCell>
+                        <TableCell className="text-xs py-1 px-2">{r.geburtsjahr || "-"}</TableCell>
+                        <TableCell className="text-xs py-1 px-2">{r.email || "-"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {bulkParsedRows.length > 5 && (
+                <p className="text-xs text-muted-foreground">… und {bulkParsedRows.length - 5} weitere</p>
+              )}
+            </div>
+          )}
+          <Button onClick={handleBulkImport} disabled={bulkParsedRows.length === 0} className="bg-primary text-primary-foreground">
+            {bulkParsedRows.length > 0 ? `Import starten (${bulkParsedRows.length})` : "Import starten"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

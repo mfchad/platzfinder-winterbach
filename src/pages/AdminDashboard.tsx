@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, LogOut } from "lucide-react";
 import MembersTab from "@/components/admin/MembersTab";
@@ -9,9 +8,19 @@ import AdminBookingsTab from "@/components/admin/AdminBookingsTab";
 import SpecialBookingsTab from "@/components/admin/SpecialBookingsTab";
 import RulesTab from "@/components/admin/RulesTab";
 
+const TABS = [
+  { key: "members", label: "Mitglieder" },
+  { key: "bookings", label: "Buchungen" },
+  { key: "special", label: "Sonderbuchungen" },
+  { key: "rules", label: "Regelwerk" },
+] as const;
+
+type TabKey = typeof TABS[number]["key"];
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("members");
 
   useEffect(() => {
     const checkAdmin = async (s: any) => {
@@ -59,20 +68,28 @@ export default function AdminDashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="members">
-          <TabsList className="mb-4 w-full flex-nowrap overflow-x-auto scrollbar-hide justify-start bg-secondary/60 rounded-lg p-1">
-            <TabsTrigger value="members" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Mitglieder</TabsTrigger>
-            <TabsTrigger value="bookings" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Buchungen</TabsTrigger>
-            <TabsTrigger value="special" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Sonderbuchungen</TabsTrigger>
-            <TabsTrigger value="rules" className="px-4 py-2 text-sm font-semibold whitespace-nowrap data-[state=active]:text-[hsl(var(--club-badge-blue))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--club-gold))] data-[state=active]:bg-background data-[state=active]:shadow-sm">Regelwerk</TabsTrigger>
-          </TabsList>
+        {/* Pill-style segmented navigation */}
+        <div className="mb-6 flex flex-nowrap overflow-x-auto scrollbar-hide bg-muted/60 rounded-full p-1 gap-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition-all ${
+                activeTab === tab.key
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          <TabsContent value="members"><MembersTab /></TabsContent>
-          <TabsContent value="bookings"><AdminBookingsTab /></TabsContent>
-          <TabsContent value="special"><SpecialBookingsTab /></TabsContent>
-          <TabsContent value="rules"><RulesTab /></TabsContent>
-
-        </Tabs>
+        {/* Tab content */}
+        {activeTab === "members" && <MembersTab />}
+        {activeTab === "bookings" && <AdminBookingsTab />}
+        {activeTab === "special" && <SpecialBookingsTab />}
+        {activeTab === "rules" && <RulesTab />}
       </main>
     </div>
   );

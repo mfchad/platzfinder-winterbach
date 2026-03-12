@@ -184,7 +184,7 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
       <div className="h-full flex">
         <div className="w-1/2 flex flex-col items-center justify-center p-1">
           <PlayerIcon className="w-4 h-4" />
-          <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.booker_vorname)}</span>
+          <span className="text-[10px] font-medium mt-0.5">{formatInitials(booking.booker_vorname, booking.booker_nachname)}</span>
         </div>
         <div className="w-1/2 flex flex-col items-center justify-center p-1 border-l border-white/20">
           <PlayerIcon className="w-4 h-4" />

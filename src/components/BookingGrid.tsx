@@ -163,7 +163,7 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
           {/* Left half - booked */}
           <div className="w-1/2 flex flex-col items-center justify-center p-1" style={{ borderRight: '1px dashed hsl(var(--slot-half-border))' }}>
             <User className="w-4 h-4 text-accent-foreground" />
-            <span className="text-[10px] font-medium mt-0.5 text-accent-foreground">{anonymizeName(booking.booker_vorname)}</span>
+            <span className="text-[10px] font-medium mt-0.5 text-accent-foreground">{formatInitials(booking.booker_vorname, booking.booker_nachname)}</span>
           </div>
           {/* Right half - open, white bg with golden dashed border visible around cell */}
           <div className="w-1/2 bg-white flex flex-col items-center justify-center p-1">

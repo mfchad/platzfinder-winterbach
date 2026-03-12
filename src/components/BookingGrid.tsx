@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { User, Users, UserPlus, UserCheck } from "lucide-react";
 import type { Booking } from "@/lib/types";
-import { anonymizeName } from "@/lib/types";
+import { formatInitials } from "@/lib/types";
 
 interface BookingGridProps {
   date: string;
@@ -163,7 +163,7 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
           {/* Left half - booked */}
           <div className="w-1/2 flex flex-col items-center justify-center p-1" style={{ borderRight: '1px dashed hsl(var(--slot-half-border))' }}>
             <User className="w-4 h-4 text-accent-foreground" />
-            <span className="text-[10px] font-medium mt-0.5 text-accent-foreground">{anonymizeName(booking.booker_vorname)}</span>
+            <span className="text-[10px] font-medium mt-0.5 text-accent-foreground">{formatInitials(booking.booker_vorname, booking.booker_nachname)}</span>
           </div>
           {/* Right half - open, white bg with golden dashed border visible around cell */}
           <div className="w-1/2 bg-white flex flex-col items-center justify-center p-1">
@@ -184,12 +184,12 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
       <div className="h-full flex">
         <div className="w-1/2 flex flex-col items-center justify-center p-1">
           <PlayerIcon className="w-4 h-4" />
-          <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.booker_vorname)}</span>
+          <span className="text-[10px] font-medium mt-0.5">{formatInitials(booking.booker_vorname, booking.booker_nachname)}</span>
         </div>
         <div className="w-1/2 flex flex-col items-center justify-center p-1 border-l border-white/20">
           <PlayerIcon className="w-4 h-4" />
           {booking.is_joined && booking.partner_vorname && (
-            <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.partner_vorname)}</span>
+            <span className="text-[10px] font-medium mt-0.5">{formatInitials(booking.partner_vorname || '', booking.partner_nachname || '')}</span>
           )}
         </div>
       </div>
@@ -208,7 +208,7 @@ function CellContent({ booking }: { booking: Booking }) {
   return (
     <div className="h-full flex items-center justify-center text-xs">
       <User className="w-3 h-3 mr-1" />
-      {anonymizeName(booking.booker_vorname)}
+      {formatInitials(booking.booker_vorname, booking.booker_nachname)}
     </div>
   );
 }

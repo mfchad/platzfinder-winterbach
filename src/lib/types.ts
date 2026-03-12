@@ -52,6 +52,14 @@ export function anonymizeName(name: string): string {
   return name.charAt(0).toUpperCase() + '***';
 }
 
+export function formatInitials(vorname: string, nachname?: string): string {
+  const first = vorname?.trim().charAt(0).toUpperCase();
+  const last = nachname?.trim().charAt(0).toUpperCase();
+  if (!first) return '??';
+  if (!last) return `${first}.`;
+  return `${first}. ${last}.`;
+}
+
 export function formatGermanDate(date: Date): string {
   const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];

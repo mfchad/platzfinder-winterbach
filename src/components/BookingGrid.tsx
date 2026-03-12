@@ -208,7 +208,7 @@ function CellContent({ booking }: { booking: Booking }) {
   return (
     <div className="h-full flex items-center justify-center text-xs">
       <User className="w-3 h-3 mr-1" />
-      {anonymizeName(booking.booker_vorname)}
+      {formatInitials(booking.booker_vorname, booking.booker_nachname)}
     </div>
   );
 }

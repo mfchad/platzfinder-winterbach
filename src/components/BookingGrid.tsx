@@ -189,7 +189,7 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
         <div className="w-1/2 flex flex-col items-center justify-center p-1 border-l border-white/20">
           <PlayerIcon className="w-4 h-4" />
           {booking.is_joined && booking.partner_vorname && (
-            <span className="text-[10px] font-medium mt-0.5">{anonymizeName(booking.partner_vorname)}</span>
+            <span className="text-[10px] font-medium mt-0.5">{formatInitials(booking.partner_vorname || '', booking.partner_nachname || '')}</span>
           )}
         </div>
       </div>

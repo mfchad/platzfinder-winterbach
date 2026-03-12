@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { User, Users, UserPlus, UserCheck } from "lucide-react";
 import type { Booking } from "@/lib/types";
-import { anonymizeName } from "@/lib/types";
+import { formatInitials } from "@/lib/types";
 
 interface BookingGridProps {
   date: string;

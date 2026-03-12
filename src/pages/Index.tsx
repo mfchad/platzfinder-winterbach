@@ -63,16 +63,17 @@ export default function Index() {
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Badge with contoured golden glow */}
-              <img
-                src={clubBadge}
-                alt="TC Winterbach Wappen"
-                className="flex-shrink-0"
-                style={{
-                  width: 48,
-                  height: 48,
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 6px hsl(var(--club-gold))) drop-shadow(0 0 14px hsla(38, 63%, 46%, 0.6))'
-                }} />
+              <a href="https://tc-winterbach.de/" target="_blank" rel="noopener noreferrer" className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                <img
+                  src={clubBadge}
+                  alt="TC Winterbach Wappen"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 0 6px hsl(var(--club-gold))) drop-shadow(0 0 14px hsla(38, 63%, 46%, 0.6))'
+                  }} />
+              </a>
               
               <h1
                 className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white cursor-pointer transition-colors hover:text-yellow-300"

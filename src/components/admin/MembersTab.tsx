@@ -524,12 +524,12 @@ export default function MembersTab() {
         </div>
       ) : (
         /* Desktop: Table view */
-        <div className={`overflow-x-auto relative rounded-lg border transition-shadow ${isEditMode ? 'shadow-[0_0_0_2px_hsl(var(--club-gold)/0.4)] border-[hsl(var(--club-gold)/0.6)]' : 'border-border/60 shadow-sm'}`}>
+        <div className={`overflow-x-auto relative rounded-xl bg-white shadow-[0_1px_6px_0_rgba(0,0,0,0.06)] border transition-shadow ${isEditMode ? 'shadow-[0_0_0_2px_hsl(var(--club-gold)/0.4)] border-[hsl(var(--club-gold)/0.6)]' : 'border-slate-200'}`}>
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead className="sticky left-0 z-10 bg-muted/40 min-w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vorname</TableHead>
-                <TableHead className="sticky left-[120px] z-10 bg-muted/40 min-w-[120px] border-r border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nachname</TableHead>
+              <TableRow className="bg-slate-50 border-b border-slate-100">
+                <TableHead className="sticky left-0 z-10 bg-slate-50 min-w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vorname</TableHead>
+                <TableHead className="sticky left-[120px] z-10 bg-slate-50 min-w-[120px] border-r border-slate-100 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nachname</TableHead>
                 <TableHead className="min-w-[100px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Jahrgang</TableHead>
                 <TableHead className="min-w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">E-Mail</TableHead>
                 {isEditMode && <TableHead className="w-12"></TableHead>}

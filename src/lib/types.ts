@@ -21,6 +21,8 @@ export interface Booking {
   is_joined: boolean;
   created_by_admin: boolean;
   created_at: string;
+  has_absage_pin?: boolean;
+  absage_pin?: string;
 }
 
 export interface Member {

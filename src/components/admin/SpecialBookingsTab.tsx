@@ -44,6 +44,10 @@ interface SeriesGroup {
   maxDate: string;
   bookings: Booking[];
   recurrenceType: string;
+  absagePin: string | null;
+  courts: number[];
+  hours: number[];
+  weekdays: number[];
 }
 
 export default function SpecialBookingsTab() {

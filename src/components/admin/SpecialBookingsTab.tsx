@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CalendarCheck, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";
@@ -67,6 +67,9 @@ export default function SpecialBookingsTab() {
   const [weeklyHours, setWeeklyHours] = useState<number[]>([]);
   const [weeklyLabel, setWeeklyLabel] = useState("Abo");
 
+  // PIN field for create/edit form
+  const [formPin, setFormPin] = useState("");
+
   // Confirmation / conflict
   const [showSummary, setShowSummary] = useState(false);
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
@@ -83,6 +86,9 @@ export default function SpecialBookingsTab() {
   const [showEditConfirm, setShowEditConfirm] = useState(false);
 
   const { toast } = useToast();
+
+  // Time validation for Einmalig
+  const einmaligTimeInvalid = mode === "einmalig" && parseInt(einmaligEndHour) <= parseInt(einmaligStartHour);
 
   const loadSeries = useCallback(async () => {
     const { data } = await supabase
@@ -306,9 +312,11 @@ export default function SpecialBookingsTab() {
 
       // Insert the first booking to get its ID
       const [first, ...rest] = bookingsToInsert;
+      // Add PIN to first booking if set
+      const firstWithPin = formPin.trim() ? { ...first, absage_pin: formPin.trim() } : first;
       const { data: firstData, error: firstErr } = await supabase
         .from("bookings")
-        .insert(first)
+        .insert(firstWithPin)
         .select("id")
         .single();
 
@@ -322,9 +330,10 @@ export default function SpecialBookingsTab() {
       // Update the first booking to set its own recurrence_parent_id
       await supabase.from("bookings").update({ recurrence_parent_id: parentId }).eq("id", parentId);
 
-      // Insert remaining bookings with the real parent ID
+      // Insert remaining bookings with the real parent ID and PIN
       if (rest.length > 0) {
-        const remaining = rest.map((b) => ({ ...b, recurrence_parent_id: parentId }));
+        const pinVal = formPin.trim() || null;
+        const remaining = rest.map((b) => ({ ...b, recurrence_parent_id: parentId, ...(pinVal ? { absage_pin: pinVal } : {}) }));
         const { error } = await supabase.from("bookings").insert(remaining);
         if (error) {
           toast({ title: "Fehler", description: error.message, variant: "destructive" });
@@ -357,6 +366,7 @@ export default function SpecialBookingsTab() {
     setWeeklyCourts([]);
     setWeeklyHours([]);
     setWeeklyLabel("Abo");
+    setFormPin("");
     setPendingBookings([]);
     setConflicts([]);
     setEditingParentId(null);
@@ -394,10 +404,10 @@ export default function SpecialBookingsTab() {
     const isEinmalig = sg.recurrenceType === "einmalig";
 
     setEditingParentId(sg.parentId);
+    setFormPin(sg.absagePin || "");
 
     if (isEinmalig) {
       setMode("einmalig");
-      // All bookings share same date
       setEinmaligDate(new Date(bks[0].date + "T00:00:00"));
       const courts = [...new Set(bks.map((b) => b.court_number))].sort();
       setEinmaligCourts(courts);
@@ -413,13 +423,11 @@ export default function SpecialBookingsTab() {
       setWeeklyCourts(courts);
       const hours = [...new Set(bks.map((b) => b.start_hour))].sort((a, b) => a - b);
       setWeeklyHours(hours);
-      // Derive weekdays from bookings
       const days = [...new Set(bks.map((b) => getDay(new Date(b.date + "T00:00:00"))))];
       setWeeklyDays(days);
       setWeeklyLabel(bks[0].special_label || "Abo");
     }
 
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast({ title: "Bearbeiten", description: "Serie-Parameter wurden in das Formular geladen." });
   };
@@ -429,13 +437,8 @@ export default function SpecialBookingsTab() {
       {/* ===== Batch Booking Form ===== */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-display flex items-center justify-between">
+          <CardTitle className="font-display">
             {editingParentId ? "Serie bearbeiten" : "Sonderbuchung erstellen"}
-            {editingParentId && (
-              <Button variant="outline" size="sm" onClick={resetForm}>
-                Abbrechen
-              </Button>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -481,9 +484,39 @@ export default function SpecialBookingsTab() {
             />
           )}
 
-          <Button onClick={handlePreview} disabled={isSaving}>
-            {editingParentId ? "Änderungen prüfen" : "Vorschau & Erstellen"}
-          </Button>
+          {/* PIN field in form */}
+          <div className="max-w-xs">
+            <Label>Absage-PIN (optional)</Label>
+            <Input
+              value={formPin}
+              onChange={(e) => setFormPin(e.target.value)}
+              placeholder="4-6 Ziffern"
+              maxLength={6}
+              className="font-mono tracking-widest"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Ermöglicht Trainern, einzelne Termine selbst abzusagen.
+            </p>
+          </div>
+
+          {/* Time validation error for Einmalig */}
+          {einmaligTimeInvalid && (
+            <p className="text-sm font-medium text-destructive">
+              Endzeit muss nach der Startzeit liegen.
+            </p>
+          )}
+
+          {/* Buttons grouped together at bottom-right */}
+          <div className="flex justify-end gap-2 pt-2">
+            {editingParentId && (
+              <Button variant="outline" onClick={resetForm}>
+                Abbrechen
+              </Button>
+            )}
+            <Button onClick={handlePreview} disabled={isSaving || einmaligTimeInvalid}>
+              {editingParentId ? "Änderungen prüfen" : "Vorschau & Erstellen"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -559,6 +592,9 @@ export default function SpecialBookingsTab() {
                       ` – ${pendingBookings[pendingBookings.length - 1]?.date}`}
                   </strong>
                 </p>
+                {formPin.trim() && (
+                  <p>Absage-PIN: <strong className="font-mono tracking-wider">{formPin.trim()}</strong></p>
+                )}
               </>
             )}
           </div>
@@ -748,18 +784,14 @@ function WeeklyForm({
     setRangeOpen(open);
   };
 
-  // Use onDayClick to get the actual clicked date and implement force-restart
   const handleDayClick = (day: Date) => {
     if (!tempRange?.from || tempRange.to) {
-      // No range yet OR complete range exists → start fresh with this date as "from"
       setTempRange({ from: day, to: undefined });
       setStartDate(day);
       setEndDate(undefined);
     } else {
-      // We have "from" but no "to" → complete the range
       let from = tempRange.from;
       let to = day;
-      // Ensure from <= to
       if (isBefore(to, from)) {
         [from, to] = [to, from];
       }
@@ -884,7 +916,7 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
             ) : (
               <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
-            <CardTitle className="text-base font-semibold truncate">{sg.label}</CardTitle>
+            <CardTitle className="text-lg font-bold tracking-tight truncate">{sg.label}</CardTitle>
           </div>
           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0">
             {sg.count} Termine
@@ -895,12 +927,21 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
         {/* Details */}
         <div className="space-y-1 text-sm text-muted-foreground">
           {sg.recurrenceType === "woechentlich" || sg.recurrenceType === "weekly" ? (
-            <p>📅 {dayStr} · {timeStr}</p>
+            <p className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              {dayStr} · {timeStr}
+            </p>
           ) : (
-            <p>📅 {timeStr}</p>
+            <p className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              {timeStr}
+            </p>
           )}
           <p>🎾 {courtStr}</p>
-          <p>📆 {dateRange}</p>
+          <p className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            {dateRange}
+          </p>
         </div>
 
         {/* PIN Section */}

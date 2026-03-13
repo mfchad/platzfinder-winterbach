@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CalendarCheck, Trash2, Edit, AlertTriangle, RefreshCw } from "lucide-react";
+import { Calendar, CalendarCheck, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";

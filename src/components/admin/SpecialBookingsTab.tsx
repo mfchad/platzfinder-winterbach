@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CalendarCheck, Trash2, Edit, AlertTriangle, RefreshCw } from "lucide-react";
+import { Calendar, CalendarCheck, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";
@@ -44,6 +44,10 @@ interface SeriesGroup {
   maxDate: string;
   bookings: Booking[];
   recurrenceType: string;
+  absagePin: string | null;
+  courts: number[];
+  hours: number[];
+  weekdays: number[];
 }
 
 export default function SpecialBookingsTab() {
@@ -88,23 +92,33 @@ export default function SpecialBookingsTab() {
       .not("recurrence_parent_id", "is", null)
       .order("date");
 
-    const bookings = (data || []) as Booking[];
-    const groups: Record<string, Booking[]> = {};
+    const bookings = (data || []) as any[];
+    const groups: Record<string, any[]> = {};
     for (const b of bookings) {
       const key = b.recurrence_parent_id || b.id;
       if (!groups[key]) groups[key] = [];
       groups[key].push(b);
     }
 
-    const result: SeriesGroup[] = Object.entries(groups).map(([parentId, bks]) => ({
-      parentId,
-      label: bks[0].special_label || "Sonderbuchung",
-      count: bks.length,
-      minDate: bks.reduce((min, b) => (b.date < min ? b.date : min), bks[0].date),
-      maxDate: bks.reduce((max, b) => (b.date > max ? b.date : max), bks[0].date),
-      bookings: bks,
-      recurrenceType: bks[0].recurrence_type || "weekly",
-    }));
+    const result: SeriesGroup[] = Object.entries(groups).map(([parentId, bks]) => {
+      const courts = [...new Set(bks.map((b: any) => b.court_number))].sort() as number[];
+      const hours = [...new Set(bks.map((b: any) => b.start_hour))].sort((a, b) => a - b) as number[];
+      const weekdays = [...new Set(bks.map((b: any) => getDay(new Date(b.date + "T00:00:00"))))].sort() as number[];
+      const pinBooking = bks.find((b: any) => b.absage_pin);
+      return {
+        parentId,
+        label: bks[0].special_label || "Sonderbuchung",
+        count: bks.length,
+        minDate: bks.reduce((min: string, b: any) => (b.date < min ? b.date : min), bks[0].date),
+        maxDate: bks.reduce((max: string, b: any) => (b.date > max ? b.date : max), bks[0].date),
+        bookings: bks as Booking[],
+        recurrenceType: bks[0].recurrence_type || "weekly",
+        absagePin: pinBooking?.absage_pin || null,
+        courts,
+        hours,
+        weekdays,
+      };
+    });
 
     result.sort((a, b) => a.minDate.localeCompare(b.minDate));
     setSeriesGroups(result);
@@ -348,6 +362,20 @@ export default function SpecialBookingsTab() {
     setEditingParentId(null);
   };
 
+  const handlePinChange = async (parentId: string, pin: string) => {
+    const pinValue = pin.trim() || null;
+    const { error } = await supabase
+      .from("bookings")
+      .update({ absage_pin: pinValue } as any)
+      .eq("recurrence_parent_id", parentId);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Erfolg", description: pinValue ? "Absage-PIN gespeichert." : "Absage-PIN entfernt." });
+      loadSeries();
+    }
+  };
+
   const handleDeleteSeries = async () => {
     if (!deleteSeriesId) return;
     const { error } = await supabase.from("bookings").delete().eq("recurrence_parent_id", deleteSeriesId);
@@ -459,75 +487,29 @@ export default function SpecialBookingsTab() {
         </CardContent>
       </Card>
 
-      {/* ===== Series Management List ===== */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display">Serien-Übersicht</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground italic">
-            Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
-          </p>
+      {/* ===== Series Management Cards ===== */}
+      <div>
+        <h2 className="font-display text-lg font-bold mb-1">Serien-Übersicht</h2>
+        <p className="text-sm text-muted-foreground italic mb-4">
+          Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
+        </p>
 
-          {seriesGroups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine Serien vorhanden.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Bezeichnung</TableHead>
-                    <TableHead>Zeitraum</TableHead>
-                    <TableHead>Termine</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {seriesGroups.map((sg) => (
-                    <TableRow key={sg.parentId}>
-                      <TableCell>
-                        <span title={sg.recurrenceType === "einmalig" ? "Einmalig" : "Wöchentlich"}>
-                          {sg.recurrenceType === "einmalig" ? (
-                            <CalendarCheck className="h-4 w-4 text-primary" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">{sg.label}</TableCell>
-                      <TableCell className="text-sm">
-                        {sg.minDate === sg.maxDate
-                          ? format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")
-                          : `${format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")} – ${format(new Date(sg.maxDate + "T00:00:00"), "dd.MM.yyyy")}`}
-                      </TableCell>
-                      <TableCell>{sg.count}</TableCell>
-                      <TableCell className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditSeries(sg)}
-                          title="Bearbeiten"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteSeriesId(sg.parentId)}
-                          title="Löschen"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {seriesGroups.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Keine Serien vorhanden.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {seriesGroups.map((sg) => (
+              <SeriesCard
+                key={sg.parentId}
+                sg={sg}
+                onEdit={() => handleEditSeries(sg)}
+                onDelete={() => setDeleteSeriesId(sg.parentId)}
+                onPinChange={(pin) => handlePinChange(sg.parentId, pin)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ===== Edit Confirmation Dialog ===== */}
       <Dialog open={showEditConfirm} onOpenChange={setShowEditConfirm}>
@@ -860,5 +842,119 @@ function WeeklyForm({
         <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="z.B. Abo, Platz Gesperrt" className="max-w-xs" />
       </div>
     </div>
+  );
+}
+
+// ===== Series Card Component =====
+const WEEKDAY_LABELS: Record<number, string> = { 0: "So", 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa" };
+
+function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
+  sg: SeriesGroup;
+  onEdit: () => void;
+  onDelete: () => void;
+  onPinChange: (pin: string) => void;
+}) {
+  const [pinInput, setPinInput] = useState(sg.absagePin || "");
+  const [showPin, setShowPin] = useState(false);
+  const [pinDirty, setPinDirty] = useState(false);
+  const { toast } = useToast();
+
+  const dateRange = sg.minDate === sg.maxDate
+    ? format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")
+    : `${format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")} – ${format(new Date(sg.maxDate + "T00:00:00"), "dd.MM.yyyy")}`;
+
+  const timeStr = sg.hours.map(h => `${String(h).padStart(2, "0")}:00`).join(", ");
+  const courtStr = sg.courts.map(c => `Platz ${c}`).join(", ");
+  const dayStr = sg.weekdays.map(d => WEEKDAY_LABELS[d] || "?").join(", ");
+
+  const handleCopyPin = () => {
+    if (sg.absagePin) {
+      navigator.clipboard.writeText(sg.absagePin);
+      toast({ title: "Kopiert", description: "PIN in Zwischenablage kopiert." });
+    }
+  };
+
+  return (
+    <Card className="bg-white shadow-[0_1px_6px_0_rgba(0,0,0,0.06)] border border-slate-200 overflow-hidden">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {sg.recurrenceType === "einmalig" ? (
+              <CalendarCheck className="h-4 w-4 text-primary shrink-0" />
+            ) : (
+              <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
+            )}
+            <CardTitle className="text-base font-semibold truncate">{sg.label}</CardTitle>
+          </div>
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0">
+            {sg.count} Termine
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        {/* Details */}
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {sg.recurrenceType === "woechentlich" || sg.recurrenceType === "weekly" ? (
+            <p>📅 {dayStr} · {timeStr}</p>
+          ) : (
+            <p>📅 {timeStr}</p>
+          )}
+          <p>🎾 {courtStr}</p>
+          <p>📆 {dateRange}</p>
+        </div>
+
+        {/* PIN Section */}
+        <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Key className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Absage-PIN</span>
+          </div>
+          <div className="flex gap-1.5">
+            <div className="relative flex-1">
+              <Input
+                value={pinInput}
+                onChange={(e) => { setPinInput(e.target.value); setPinDirty(e.target.value !== (sg.absagePin || "")); }}
+                placeholder="4-6 Ziffern"
+                maxLength={6}
+                type={showPin ? "text" : "password"}
+                className="pr-8 text-sm font-mono h-8"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin(!showPin)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPin ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {sg.absagePin && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopyPin} title="PIN kopieren">
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {pinDirty && (
+              <Button size="sm" className="h-8 shrink-0" onClick={() => { onPinChange(pinInput); setPinDirty(false); }}>
+                Speichern
+              </Button>
+            )}
+          </div>
+          {sg.absagePin && (
+            <p className="text-[11px] text-emerald-600 mt-1.5 flex items-center gap-1">
+              ✓ PIN aktiv — Trainer können Einzeltermine absagen
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 h-8 text-xs">
+            <Edit className="h-3 w-3 mr-1" /> Bearbeiten
+          </Button>
+          <Button variant="outline" size="sm" onClick={onDelete} className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5">
+            <Trash2 className="h-3 w-3 mr-1" /> Löschen
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

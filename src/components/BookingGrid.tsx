@@ -111,7 +111,8 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
                   isPast={past}
                   onClick={() => {
                     if (past) return;
-                    if (booking?.booking_type === 'special') return;
+                    // Allow click on special bookings that have a PIN
+                    if (booking?.booking_type === 'special' && !booking?.has_absage_pin) return;
                     onSlotClick(court, hour, booking);
                   }}
                 />
@@ -147,8 +148,12 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
   }
 
   if (booking.booking_type === 'special') {
+    const clickable = booking.has_absage_pin && !isPast;
     return (
-      <div className="court-cell court-cell-special">
+      <div
+        className={`court-cell court-cell-special ${clickable ? 'cursor-pointer ring-1 ring-inset ring-white/30 hover:brightness-110' : ''}`}
+        onClick={clickable ? onClick : undefined}
+      >
         <div className="h-full flex items-center justify-center text-xs font-semibold">
           {booking.special_label || 'Belegt'}
         </div>

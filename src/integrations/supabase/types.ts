@@ -61,6 +61,7 @@ export type Database = {
           partner_vorname: string | null
           recurrence_end_date: string | null
           recurrence_parent_id: string | null
+          recurrence_total_count: number | null
           recurrence_type: string | null
           special_label: string | null
           start_hour: number
@@ -87,6 +88,7 @@ export type Database = {
           partner_vorname?: string | null
           recurrence_end_date?: string | null
           recurrence_parent_id?: string | null
+          recurrence_total_count?: number | null
           recurrence_type?: string | null
           special_label?: string | null
           start_hour: number
@@ -113,6 +115,7 @@ export type Database = {
           partner_vorname?: string | null
           recurrence_end_date?: string | null
           recurrence_parent_id?: string | null
+          recurrence_total_count?: number | null
           recurrence_type?: string | null
           special_label?: string | null
           start_hour?: number

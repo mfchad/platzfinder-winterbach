@@ -844,3 +844,117 @@ function WeeklyForm({
     </div>
   );
 }
+
+// ===== Series Card Component =====
+const WEEKDAY_LABELS: Record<number, string> = { 0: "So", 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa" };
+
+function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
+  sg: SeriesGroup;
+  onEdit: () => void;
+  onDelete: () => void;
+  onPinChange: (pin: string) => void;
+}) {
+  const [pinInput, setPinInput] = useState(sg.absagePin || "");
+  const [showPin, setShowPin] = useState(false);
+  const [pinDirty, setPinDirty] = useState(false);
+  const { toast } = useToast();
+
+  const dateRange = sg.minDate === sg.maxDate
+    ? format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")
+    : `${format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")} – ${format(new Date(sg.maxDate + "T00:00:00"), "dd.MM.yyyy")}`;
+
+  const timeStr = sg.hours.map(h => `${String(h).padStart(2, "0")}:00`).join(", ");
+  const courtStr = sg.courts.map(c => `Platz ${c}`).join(", ");
+  const dayStr = sg.weekdays.map(d => WEEKDAY_LABELS[d] || "?").join(", ");
+
+  const handleCopyPin = () => {
+    if (sg.absagePin) {
+      navigator.clipboard.writeText(sg.absagePin);
+      toast({ title: "Kopiert", description: "PIN in Zwischenablage kopiert." });
+    }
+  };
+
+  return (
+    <Card className="bg-white shadow-[0_1px_6px_0_rgba(0,0,0,0.06)] border border-slate-200 overflow-hidden">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {sg.recurrenceType === "einmalig" ? (
+              <CalendarCheck className="h-4 w-4 text-primary shrink-0" />
+            ) : (
+              <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
+            )}
+            <CardTitle className="text-base font-semibold truncate">{sg.label}</CardTitle>
+          </div>
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0">
+            {sg.count} Termine
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        {/* Details */}
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {sg.recurrenceType === "woechentlich" || sg.recurrenceType === "weekly" ? (
+            <p>📅 {dayStr} · {timeStr}</p>
+          ) : (
+            <p>📅 {timeStr}</p>
+          )}
+          <p>🎾 {courtStr}</p>
+          <p>📆 {dateRange}</p>
+        </div>
+
+        {/* PIN Section */}
+        <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Key className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Absage-PIN</span>
+          </div>
+          <div className="flex gap-1.5">
+            <div className="relative flex-1">
+              <Input
+                value={pinInput}
+                onChange={(e) => { setPinInput(e.target.value); setPinDirty(e.target.value !== (sg.absagePin || "")); }}
+                placeholder="4-6 Ziffern"
+                maxLength={6}
+                type={showPin ? "text" : "password"}
+                className="pr-8 text-sm font-mono h-8"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin(!showPin)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPin ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {sg.absagePin && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopyPin} title="PIN kopieren">
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {pinDirty && (
+              <Button size="sm" className="h-8 shrink-0" onClick={() => { onPinChange(pinInput); setPinDirty(false); }}>
+                Speichern
+              </Button>
+            )}
+          </div>
+          {sg.absagePin && (
+            <p className="text-[11px] text-emerald-600 mt-1.5 flex items-center gap-1">
+              ✓ PIN aktiv — Trainer können Einzeltermine absagen
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 h-8 text-xs">
+            <Edit className="h-3 w-3 mr-1" /> Bearbeiten
+          </Button>
+          <Button variant="outline" size="sm" onClick={onDelete} className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5">
+            <Trash2 className="h-3 w-3 mr-1" /> Löschen
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

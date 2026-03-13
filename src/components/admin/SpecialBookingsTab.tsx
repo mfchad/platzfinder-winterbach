@@ -982,8 +982,21 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
     }
   };
 
-  const hasCancelled = sg.totalCount > sg.count;
-  const iconColorClass = sg.isPast ? "text-muted-foreground" : "text-primary";
+  // Calculate detailed statistics
+  const now = new Date();
+  const todayStr = formatDateISO(now);
+  const currentHour = now.getHours();
+
+  const pastCount = sg.bookings.filter((b) => {
+    if (b.date < todayStr) return true;
+    if (b.date === todayStr && b.start_hour < currentHour) return true;
+    return false;
+  }).length;
+  const upcomingCount = sg.count - pastCount;
+  const cancelledCount = sg.totalCount - sg.count;
+
+  const iconColorClass = sg.isPast ? "text-muted-foreground" : "text-club-royal";
+  const clockColorClass = sg.isPast ? "text-muted-foreground" : "text-club-blue";
 
   return (
     <Card className={`overflow-hidden transition-all ${
@@ -1001,19 +1014,12 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
             )}
             <CardTitle className="text-lg font-bold tracking-tight truncate">{sg.label}</CardTitle>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center shrink-0">
             {sg.isPast && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground">
                 Beendet
               </Badge>
             )}
-            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-              hasCancelled 
-                ? "bg-amber-50 text-amber-700 border border-amber-200" 
-                : "bg-muted text-muted-foreground"
-            }`}>
-              {hasCancelled ? `${sg.count} / ${sg.totalCount}` : sg.count} Termine
-            </span>
           </div>
         </div>
       </CardHeader>
@@ -1022,12 +1028,12 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
         <div className="space-y-1 text-sm text-muted-foreground">
           {sg.recurrenceType === "woechentlich" || sg.recurrenceType === "weekly" ? (
             <p className="flex items-center gap-1.5">
-              <Clock className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`} />
+              <Clock className={`h-3.5 w-3.5 shrink-0 ${clockColorClass}`} />
               {dayStr} · {timeStr}
             </p>
           ) : (
             <p className="flex items-center gap-1.5">
-              <Clock className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`} />
+              <Clock className={`h-3.5 w-3.5 shrink-0 ${clockColorClass}`} />
               {timeStr}
             </p>
           )}
@@ -1036,6 +1042,20 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
             <Calendar className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`} />
             {dateRange}
           </p>
+        </div>
+
+        {/* Termine Statistics */}
+        <div className={`text-xs rounded-md px-3 py-2 border ${sg.isPast ? "bg-muted/30 border-border/50" : "bg-slate-50 border-slate-100"}`}>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            <span className="text-muted-foreground">Gesamt: <strong className="text-foreground">{sg.totalCount}</strong></span>
+            <span className="text-muted-foreground">Geplant: <strong className="text-club-blue">{upcomingCount}</strong></span>
+            {cancelledCount > 0 && (
+              <span className="text-muted-foreground">Abgesagt: <strong className="text-destructive">{cancelledCount}</strong></span>
+            )}
+            {pastCount > 0 && (
+              <span className="text-muted-foreground">Vergangen: <strong className="text-muted-foreground">{pastCount}</strong></span>
+            )}
+          </div>
         </div>
 
         {/* PIN Section */}

@@ -111,7 +111,8 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
                   isPast={past}
                   onClick={() => {
                     if (past) return;
-                    if (booking?.booking_type === 'special') return;
+                    // Allow click on special bookings that have a PIN
+                    if (booking?.booking_type === 'special' && !booking?.has_absage_pin) return;
                     onSlotClick(court, hour, booking);
                   }}
                 />

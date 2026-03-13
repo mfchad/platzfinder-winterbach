@@ -362,6 +362,20 @@ export default function SpecialBookingsTab() {
     setEditingParentId(null);
   };
 
+  const handlePinChange = async (parentId: string, pin: string) => {
+    const pinValue = pin.trim() || null;
+    const { error } = await supabase
+      .from("bookings")
+      .update({ absage_pin: pinValue } as any)
+      .eq("recurrence_parent_id", parentId);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Erfolg", description: pinValue ? "Absage-PIN gespeichert." : "Absage-PIN entfernt." });
+      loadSeries();
+    }
+  };
+
   const handleDeleteSeries = async () => {
     if (!deleteSeriesId) return;
     const { error } = await supabase.from("bookings").delete().eq("recurrence_parent_id", deleteSeriesId);

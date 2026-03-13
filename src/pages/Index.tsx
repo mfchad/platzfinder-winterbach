@@ -8,6 +8,7 @@ import DateNavigation from "@/components/DateNavigation";
 import Legend from "@/components/Legend";
 import NewBookingDialog from "@/components/NewBookingDialog";
 import ExistingBookingDialog from "@/components/ExistingBookingDialog";
+import TrainerCancelDialog from "@/components/TrainerCancelDialog";
 import { fetchRules, getRuleNum, clearRulesCache } from "@/lib/booking-rules";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
@@ -20,6 +21,7 @@ export default function Index() {
   const [rules, setRules] = useState<Record<string, string>>({});
   const [newBooking, setNewBooking] = useState<{court: number;hour: number;} | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [trainerCancelBooking, setTrainerCancelBooking] = useState<Booking | null>(null);
 
   const dateStr = formatDateISO(date);
   const startHour = getRuleNum(rules, 'day_start_hour', 8);
@@ -45,7 +47,12 @@ export default function Index() {
 
   const handleSlotClick = (court: number, hour: number, booking?: Booking) => {
     if (booking) {
-      setSelectedBooking(booking);
+      // Special booking with PIN → show trainer cancel dialog
+      if (booking.booking_type === 'special' && booking.has_absage_pin) {
+        setTrainerCancelBooking(booking);
+      } else {
+        setSelectedBooking(booking);
+      }
     } else {
       setNewBooking({ court, hour });
     }
@@ -127,7 +134,6 @@ export default function Index() {
         date={dateStr}
         rules={rules}
         onSuccess={loadBookings} />
-
       }
       {selectedBooking &&
       <ExistingBookingDialog
@@ -135,8 +141,13 @@ export default function Index() {
         onClose={() => setSelectedBooking(null)}
         booking={selectedBooking}
         onSuccess={loadBookings} />
-
+      }
+      {trainerCancelBooking &&
+      <TrainerCancelDialog
+        open={!!trainerCancelBooking}
+        onClose={() => setTrainerCancelBooking(null)}
+        booking={trainerCancelBooking}
+        onSuccess={loadBookings} />
       }
     </div>);
-
 }

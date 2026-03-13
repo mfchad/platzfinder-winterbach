@@ -92,23 +92,33 @@ export default function SpecialBookingsTab() {
       .not("recurrence_parent_id", "is", null)
       .order("date");
 
-    const bookings = (data || []) as Booking[];
-    const groups: Record<string, Booking[]> = {};
+    const bookings = (data || []) as any[];
+    const groups: Record<string, any[]> = {};
     for (const b of bookings) {
       const key = b.recurrence_parent_id || b.id;
       if (!groups[key]) groups[key] = [];
       groups[key].push(b);
     }
 
-    const result: SeriesGroup[] = Object.entries(groups).map(([parentId, bks]) => ({
-      parentId,
-      label: bks[0].special_label || "Sonderbuchung",
-      count: bks.length,
-      minDate: bks.reduce((min, b) => (b.date < min ? b.date : min), bks[0].date),
-      maxDate: bks.reduce((max, b) => (b.date > max ? b.date : max), bks[0].date),
-      bookings: bks,
-      recurrenceType: bks[0].recurrence_type || "weekly",
-    }));
+    const result: SeriesGroup[] = Object.entries(groups).map(([parentId, bks]) => {
+      const courts = [...new Set(bks.map((b: any) => b.court_number))].sort() as number[];
+      const hours = [...new Set(bks.map((b: any) => b.start_hour))].sort((a, b) => a - b) as number[];
+      const weekdays = [...new Set(bks.map((b: any) => getDay(new Date(b.date + "T00:00:00"))))].sort() as number[];
+      const pinBooking = bks.find((b: any) => b.absage_pin);
+      return {
+        parentId,
+        label: bks[0].special_label || "Sonderbuchung",
+        count: bks.length,
+        minDate: bks.reduce((min: string, b: any) => (b.date < min ? b.date : min), bks[0].date),
+        maxDate: bks.reduce((max: string, b: any) => (b.date > max ? b.date : max), bks[0].date),
+        bookings: bks as Booking[],
+        recurrenceType: bks[0].recurrence_type || "weekly",
+        absagePin: pinBooking?.absage_pin || null,
+        courts,
+        hours,
+        weekdays,
+      };
+    });
 
     result.sort((a, b) => a.minDate.localeCompare(b.minDate));
     setSeriesGroups(result);

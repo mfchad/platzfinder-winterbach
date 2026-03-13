@@ -148,8 +148,12 @@ function SlotCell({ booking, isPast, onClick }: { booking?: Booking; isPast: boo
   }
 
   if (booking.booking_type === 'special') {
+    const clickable = booking.has_absage_pin && !isPast;
     return (
-      <div className="court-cell court-cell-special">
+      <div
+        className={`court-cell court-cell-special ${clickable ? 'cursor-pointer ring-1 ring-inset ring-white/30 hover:brightness-110' : ''}`}
+        onClick={clickable ? onClick : undefined}
+      >
         <div className="h-full flex items-center justify-center text-xs font-semibold">
           {booking.special_label || 'Belegt'}
         </div>

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.update-booking]
 verify_jwt = false
+
+[functions.cancel-trainer-booking]
+verify_jwt = false

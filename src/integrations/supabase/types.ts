@@ -40,6 +40,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          absage_pin: string | null
           booker_comment: string | null
           booker_email: string | null
           booker_geburtsjahr: number
@@ -65,6 +66,7 @@ export type Database = {
           start_hour: number
         }
         Insert: {
+          absage_pin?: string | null
           booker_comment?: string | null
           booker_email?: string | null
           booker_geburtsjahr: number
@@ -90,6 +92,7 @@ export type Database = {
           start_hour: number
         }
         Update: {
+          absage_pin?: string | null
           booker_comment?: string | null
           booker_email?: string | null
           booker_geburtsjahr?: number
@@ -190,6 +193,7 @@ export type Database = {
           created_by_admin: boolean | null
           date: string | null
           double_match_names: string | null
+          has_absage_pin: boolean | null
           id: string | null
           is_joined: boolean | null
           partner_comment: string | null
@@ -213,6 +217,7 @@ export type Database = {
           created_by_admin?: boolean | null
           date?: string | null
           double_match_names?: string | null
+          has_absage_pin?: never
           id?: string | null
           is_joined?: boolean | null
           partner_comment?: string | null
@@ -236,6 +241,7 @@ export type Database = {
           created_by_admin?: boolean | null
           date?: string | null
           double_match_names?: string | null
+          has_absage_pin?: never
           id?: string | null
           is_joined?: boolean | null
           partner_comment?: string | null

@@ -473,75 +473,29 @@ export default function SpecialBookingsTab() {
         </CardContent>
       </Card>
 
-      {/* ===== Series Management List ===== */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display">Serien-Übersicht</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground italic">
-            Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
-          </p>
+      {/* ===== Series Management Cards ===== */}
+      <div>
+        <h2 className="font-display text-lg font-bold mb-1">Serien-Übersicht</h2>
+        <p className="text-sm text-muted-foreground italic mb-4">
+          Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
+        </p>
 
-          {seriesGroups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Keine Serien vorhanden.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Bezeichnung</TableHead>
-                    <TableHead>Zeitraum</TableHead>
-                    <TableHead>Termine</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {seriesGroups.map((sg) => (
-                    <TableRow key={sg.parentId}>
-                      <TableCell>
-                        <span title={sg.recurrenceType === "einmalig" ? "Einmalig" : "Wöchentlich"}>
-                          {sg.recurrenceType === "einmalig" ? (
-                            <CalendarCheck className="h-4 w-4 text-primary" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">{sg.label}</TableCell>
-                      <TableCell className="text-sm">
-                        {sg.minDate === sg.maxDate
-                          ? format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")
-                          : `${format(new Date(sg.minDate + "T00:00:00"), "dd.MM.yyyy")} – ${format(new Date(sg.maxDate + "T00:00:00"), "dd.MM.yyyy")}`}
-                      </TableCell>
-                      <TableCell>{sg.count}</TableCell>
-                      <TableCell className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditSeries(sg)}
-                          title="Bearbeiten"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteSeriesId(sg.parentId)}
-                          title="Löschen"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {seriesGroups.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Keine Serien vorhanden.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {seriesGroups.map((sg) => (
+              <SeriesCard
+                key={sg.parentId}
+                sg={sg}
+                onEdit={() => handleEditSeries(sg)}
+                onDelete={() => setDeleteSeriesId(sg.parentId)}
+                onPinChange={(pin) => handlePinChange(sg.parentId, pin)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ===== Edit Confirmation Dialog ===== */}
       <Dialog open={showEditConfirm} onOpenChange={setShowEditConfirm}>

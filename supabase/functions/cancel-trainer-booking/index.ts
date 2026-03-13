@@ -49,7 +49,6 @@ Deno.serve(async (req) => {
     // Check PIN: booking itself may not have PIN, check via the series parent
     let correctPin = booking.absage_pin;
     if (!correctPin && booking.recurrence_parent_id) {
-      // Get PIN from any sibling in the series (they all share the same parent)
       const { data: sibling } = await supabase
         .from("bookings")
         .select("absage_pin")
@@ -72,6 +71,27 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Falscher PIN." }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // If this booking IS the parent (other bookings reference it), reassign children first
+    const parentId = booking.recurrence_parent_id || booking.id;
+    
+    // Check if other bookings reference this booking as their parent
+    const { data: children } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("recurrence_parent_id", bookingId)
+      .neq("id", bookingId);
+
+    if (children && children.length > 0) {
+      // Find a new parent among siblings (any booking that isn't being deleted)
+      const newParentId = children[0].id;
+      
+      // Update all siblings (including those pointing to old parent) to new parent
+      await supabase
+        .from("bookings")
+        .update({ recurrence_parent_id: newParentId })
+        .eq("recurrence_parent_id", bookingId);
     }
 
     // Delete only this single occurrence

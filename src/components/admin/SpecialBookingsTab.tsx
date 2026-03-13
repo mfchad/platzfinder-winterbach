@@ -9,9 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";
@@ -40,6 +41,7 @@ interface SeriesGroup {
   parentId: string;
   label: string;
   count: number;
+  totalCount: number;
   minDate: string;
   maxDate: string;
   bookings: Booking[];
@@ -48,6 +50,7 @@ interface SeriesGroup {
   courts: number[];
   hours: number[];
   weekdays: number[];
+  isPast: boolean;
 }
 
 export default function SpecialBookingsTab() {
@@ -85,12 +88,17 @@ export default function SpecialBookingsTab() {
   const [editingParentId, setEditingParentId] = useState<string | null>(null);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
 
+  // Past series toggle
+  const [showPast, setShowPast] = useState(false);
+
   const { toast } = useToast();
 
   // Time validation for Einmalig
   const einmaligTimeInvalid = mode === "einmalig" && parseInt(einmaligEndHour) <= parseInt(einmaligStartHour);
 
   const loadSeries = useCallback(async () => {
+    // Query ALL special bookings with recurrence_parent_id set
+    // Also include bookings that ARE parents (their own id might be a parent)
     const { data } = await supabase
       .from("bookings")
       .select("*")
@@ -106,27 +114,55 @@ export default function SpecialBookingsTab() {
       groups[key].push(b);
     }
 
+    // Compute current time for isPast check
+    const now = new Date();
+    const todayStr = formatDateISO(now);
+    const currentHour = now.getHours();
+
     const result: SeriesGroup[] = Object.entries(groups).map(([parentId, bks]) => {
       const courts = [...new Set(bks.map((b: any) => b.court_number))].sort() as number[];
       const hours = [...new Set(bks.map((b: any) => b.start_hour))].sort((a, b) => a - b) as number[];
       const weekdays = [...new Set(bks.map((b: any) => getDay(new Date(b.date + "T00:00:00"))))].sort() as number[];
       const pinBooking = bks.find((b: any) => b.absage_pin);
+      
+      const minDate = bks.reduce((min: string, b: any) => (b.date < min ? b.date : min), bks[0].date);
+      const maxDate = bks.reduce((max: string, b: any) => (b.date > max ? b.date : max), bks[0].date);
+      const maxHour = Math.max(...hours);
+
+      // Series is past if ALL remaining bookings are in the past
+      const allPast = bks.every((b: any) => {
+        if (b.date < todayStr) return true;
+        if (b.date === todayStr && b.start_hour < currentHour) return true;
+        return false;
+      });
+
+      // Total count from recurrence_total_count field (if set), otherwise use current count
+      const storedTotal = bks.find((b: any) => b.recurrence_total_count)?.recurrence_total_count;
+      const totalCount = storedTotal || bks.length;
+
       return {
         parentId,
         label: bks[0].special_label || "Sonderbuchung",
         count: bks.length,
-        minDate: bks.reduce((min: string, b: any) => (b.date < min ? b.date : min), bks[0].date),
-        maxDate: bks.reduce((max: string, b: any) => (b.date > max ? b.date : max), bks[0].date),
+        totalCount,
+        minDate,
+        maxDate,
         bookings: bks as Booking[],
         recurrenceType: bks[0].recurrence_type || "weekly",
         absagePin: pinBooking?.absage_pin || null,
         courts,
         hours,
         weekdays,
+        isPast: allPast,
       };
     });
 
-    result.sort((a, b) => a.minDate.localeCompare(b.minDate));
+    // Sort: active first (by minDate), then past (by maxDate desc)
+    result.sort((a, b) => {
+      if (a.isPast !== b.isPast) return a.isPast ? 1 : -1;
+      return a.minDate.localeCompare(b.minDate);
+    });
+
     setSeriesGroups(result);
   }, []);
 
@@ -180,7 +216,7 @@ export default function SpecialBookingsTab() {
     const end = new Date(weeklyEndDate);
 
     while (isBefore(current, end) || isEqual(current, end)) {
-      const jsDay = getDay(current); // 0=Sun
+      const jsDay = getDay(current);
       if (weeklyDays.includes(jsDay)) {
         const dateStr = formatDateISO(current);
         for (const court of weeklyCourts) {
@@ -215,7 +251,6 @@ export default function SpecialBookingsTab() {
     }
     setPendingBookings(bookings);
 
-    // If editing, show edit-specific confirmation first
     if (editingParentId) {
       setShowEditConfirm(true);
     } else {
@@ -232,7 +267,6 @@ export default function SpecialBookingsTab() {
     setShowSummary(false);
     setIsSaving(true);
 
-    // If editing, delete old series bookings first
     let deleteOldIds: string[] = [];
     if (editingParentId) {
       const { data: oldBookings } = await supabase
@@ -242,7 +276,6 @@ export default function SpecialBookingsTab() {
       deleteOldIds = (oldBookings || []).map((b: any) => b.id);
     }
 
-    // Check for conflicts (exclude special bookings AND the old series being edited)
     const dateSet = [...new Set(pendingBookings.map((b) => b.date))];
     const query = supabase
       .from("bookings")
@@ -253,7 +286,6 @@ export default function SpecialBookingsTab() {
     const { data: existing } = await query;
 
     const existingBookings = (existing || []) as Booking[];
-    // Also exclude old series bookings from conflict check
     const filteredExisting = editingParentId
       ? existingBookings.filter((eb) => !deleteOldIds.includes(eb.id))
       : existingBookings;
@@ -273,7 +305,6 @@ export default function SpecialBookingsTab() {
       setShowConflicts(true);
       setIsSaving(false);
     } else {
-      // Delete old series + save new
       await saveBookings(pendingBookings, deleteOldIds);
     }
   };
@@ -282,7 +313,6 @@ export default function SpecialBookingsTab() {
     setShowConflicts(false);
     const conflictIds = conflicts.map((c) => c.booking.id);
 
-    // Also include old series bookings for deletion if editing
     let allDeleteIds = [...conflictIds];
     if (editingParentId) {
       const { data: oldBookings } = await supabase
@@ -307,16 +337,18 @@ export default function SpecialBookingsTab() {
         }
       }
 
-      // Remove the placeholder recurrence_parent_id — we'll use the first booking's real id
+      const totalCount = bookings.length;
       const bookingsToInsert = bookings.map(({ recurrence_parent_id, ...rest }) => rest);
 
-      // Insert the first booking to get its ID
       const [first, ...rest] = bookingsToInsert;
-      // Add PIN to first booking if set
-      const firstWithPin = formPin.trim() ? { ...first, absage_pin: formPin.trim() } : first;
+      const firstWithExtras = {
+        ...first,
+        recurrence_total_count: totalCount,
+        ...(formPin.trim() ? { absage_pin: formPin.trim() } : {}),
+      };
       const { data: firstData, error: firstErr } = await supabase
         .from("bookings")
-        .insert(firstWithPin)
+        .insert(firstWithExtras)
         .select("id")
         .single();
 
@@ -327,13 +359,16 @@ export default function SpecialBookingsTab() {
 
       const parentId = firstData.id;
 
-      // Update the first booking to set its own recurrence_parent_id
       await supabase.from("bookings").update({ recurrence_parent_id: parentId }).eq("id", parentId);
 
-      // Insert remaining bookings with the real parent ID and PIN
       if (rest.length > 0) {
         const pinVal = formPin.trim() || null;
-        const remaining = rest.map((b) => ({ ...b, recurrence_parent_id: parentId, ...(pinVal ? { absage_pin: pinVal } : {}) }));
+        const remaining = rest.map((b) => ({
+          ...b,
+          recurrence_parent_id: parentId,
+          recurrence_total_count: totalCount,
+          ...(pinVal ? { absage_pin: pinVal } : {}),
+        }));
         const { error } = await supabase.from("bookings").insert(remaining);
         if (error) {
           toast({ title: "Fehler", description: error.message, variant: "destructive" });
@@ -399,7 +434,6 @@ export default function SpecialBookingsTab() {
   };
 
   const handleEditSeries = (sg: SeriesGroup) => {
-    // Populate form from series bookings
     const bks = sg.bookings;
     const isEinmalig = sg.recurrenceType === "einmalig";
 
@@ -431,6 +465,10 @@ export default function SpecialBookingsTab() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast({ title: "Bearbeiten", description: "Serie-Parameter wurden in das Formular geladen." });
   };
+
+  // Separate active and past series
+  const activeGroups = seriesGroups.filter((sg) => !sg.isPast);
+  const pastGroups = seriesGroups.filter((sg) => sg.isPast);
 
   return (
     <div className="space-y-6">
@@ -530,17 +568,55 @@ export default function SpecialBookingsTab() {
         {seriesGroups.length === 0 ? (
           <p className="text-sm text-muted-foreground">Keine Serien vorhanden.</p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {seriesGroups.map((sg) => (
-              <SeriesCard
-                key={sg.parentId}
-                sg={sg}
-                onEdit={() => handleEditSeries(sg)}
-                onDelete={() => setDeleteSeriesId(sg.parentId)}
-                onPinChange={(pin) => handlePinChange(sg.parentId, pin)}
-              />
-            ))}
-          </div>
+          <>
+            {/* Active series */}
+            {activeGroups.length > 0 && (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+                {activeGroups.map((sg) => (
+                  <SeriesCard
+                    key={sg.parentId}
+                    sg={sg}
+                    onEdit={() => handleEditSeries(sg)}
+                    onDelete={() => setDeleteSeriesId(sg.parentId)}
+                    onPinChange={(pin) => handlePinChange(sg.parentId, pin)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Past series toggle */}
+            {pastGroups.length > 0 && (
+              <div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPast(!showPast)}
+                  className="text-muted-foreground hover:text-foreground mb-3"
+                >
+                  {showPast ? <ChevronUp className="h-4 w-4 mr-1.5" /> : <ChevronDown className="h-4 w-4 mr-1.5" />}
+                  {showPast ? "Vergangene Serien ausblenden" : `Vergangene Serien anzeigen (${pastGroups.length})`}
+                </Button>
+
+                {showPast && (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {pastGroups.map((sg) => (
+                      <SeriesCard
+                        key={sg.parentId}
+                        sg={sg}
+                        onEdit={() => handleEditSeries(sg)}
+                        onDelete={() => setDeleteSeriesId(sg.parentId)}
+                        onPinChange={(pin) => handlePinChange(sg.parentId, pin)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeGroups.length === 0 && !showPast && pastGroups.length > 0 && (
+              <p className="text-sm text-muted-foreground">Keine aktiven Serien. Vergangene Serien können oben eingeblendet werden.</p>
+            )}
+          </>
         )}
       </div>
 
@@ -673,7 +749,7 @@ export default function SpecialBookingsTab() {
   );
 }
 
-// ===== Einmalig Date Picker (auto-close on select) =====
+// ===== Einmalig Date Picker =====
 function EinmaligDatePicker({ date, setDate }: { date: Date | undefined; setDate: (d: Date | undefined) => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -906,21 +982,39 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
     }
   };
 
+  const hasCancelled = sg.totalCount > sg.count;
+  const iconColorClass = sg.isPast ? "text-muted-foreground" : "text-primary";
+
   return (
-    <Card className="bg-white shadow-[0_1px_6px_0_rgba(0,0,0,0.06)] border border-slate-200 overflow-hidden">
+    <Card className={`overflow-hidden transition-all ${
+      sg.isPast 
+        ? "bg-muted/50 border-border/50 opacity-70 grayscale-[40%]" 
+        : "bg-white shadow-[0_1px_6px_0_rgba(0,0,0,0.06)] border-border"
+    }`}>
       <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {sg.recurrenceType === "einmalig" ? (
-              <CalendarCheck className="h-4 w-4 text-primary shrink-0" />
+              <CalendarCheck className={`h-4 w-4 shrink-0 ${iconColorClass}`} />
             ) : (
-              <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
+              <RefreshCw className={`h-4 w-4 shrink-0 ${iconColorClass}`} />
             )}
             <CardTitle className="text-lg font-bold tracking-tight truncate">{sg.label}</CardTitle>
           </div>
-          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0">
-            {sg.count} Termine
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {sg.isPast && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground">
+                Beendet
+              </Badge>
+            )}
+            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+              hasCancelled 
+                ? "bg-amber-50 text-amber-700 border border-amber-200" 
+                : "bg-muted text-muted-foreground"
+            }`}>
+              {hasCancelled ? `${sg.count} / ${sg.totalCount}` : sg.count} Termine
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
@@ -928,18 +1022,18 @@ function SeriesCard({ sg, onEdit, onDelete, onPinChange }: {
         <div className="space-y-1 text-sm text-muted-foreground">
           {sg.recurrenceType === "woechentlich" || sg.recurrenceType === "weekly" ? (
             <p className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <Clock className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`} />
               {dayStr} · {timeStr}
             </p>
           ) : (
             <p className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <Clock className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`} />
               {timeStr}
             </p>
           )}
           <p>🎾 {courtStr}</p>
           <p className="flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <Calendar className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`} />
             {dateRange}
           </p>
         </div>

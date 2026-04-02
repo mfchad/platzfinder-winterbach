@@ -90,6 +90,8 @@ export default function SpecialBookingsTab() {
 
   // Past series toggle
   const [showPast, setShowPast] = useState(false);
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { toast } = useToast();
 
@@ -97,18 +99,27 @@ export default function SpecialBookingsTab() {
   const einmaligTimeInvalid = mode === "einmalig" && parseInt(einmaligEndHour) <= parseInt(einmaligStartHour);
 
   const loadSeries = useCallback(async () => {
-    // Query ALL special bookings with recurrence_parent_id set
-    // Also include bookings that ARE parents (their own id might be a parent)
-    const { data } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("booking_type", "special")
-      .not("recurrence_parent_id", "is", null)
-      .order("date");
+    // Fetch ALL special bookings in pages of 1000 to bypass Supabase default limit
+    let allBookings: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("booking_type", "special")
+        .order("date")
+        .range(page * pageSize, (page + 1) * pageSize - 1);
 
-    const bookings = (data || []) as any[];
+      const rows = data || [];
+      allBookings = allBookings.concat(rows);
+      if (rows.length < pageSize) break;
+      page++;
+    }
+
     const groups: Record<string, any[]> = {};
-    for (const b of bookings) {
+    for (const b of allBookings) {
+      // Use recurrence_parent_id if set, otherwise use own id (orphan/standalone)
       const key = b.recurrence_parent_id || b.id;
       if (!groups[key]) groups[key] = [];
       groups[key].push(b);
@@ -127,7 +138,6 @@ export default function SpecialBookingsTab() {
       
       const minDate = bks.reduce((min: string, b: any) => (b.date < min ? b.date : min), bks[0].date);
       const maxDate = bks.reduce((max: string, b: any) => (b.date > max ? b.date : max), bks[0].date);
-      const maxHour = Math.max(...hours);
 
       // Series is past if ALL remaining bookings are in the past
       const allPast = bks.every((b: any) => {

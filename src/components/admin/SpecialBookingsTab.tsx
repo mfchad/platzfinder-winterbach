@@ -476,9 +476,17 @@ export default function SpecialBookingsTab() {
     toast({ title: "Bearbeiten", description: "Serie-Parameter wurden in das Formular geladen." });
   };
 
-  // Separate active and past series
-  const activeGroups = seriesGroups.filter((sg) => !sg.isPast);
-  const pastGroups = seriesGroups.filter((sg) => sg.isPast);
+  // Filter by search query then separate active/past
+  const filteredGroups = searchQuery.trim()
+    ? seriesGroups.filter((sg) =>
+        sg.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sg.courts.some((c) => `platz ${c}`.includes(searchQuery.toLowerCase())) ||
+        sg.minDate.includes(searchQuery) ||
+        sg.maxDate.includes(searchQuery)
+      )
+    : seriesGroups;
+  const activeGroups = filteredGroups.filter((sg) => !sg.isPast);
+  const pastGroups = filteredGroups.filter((sg) => sg.isPast);
 
   return (
     <div className="space-y-6">

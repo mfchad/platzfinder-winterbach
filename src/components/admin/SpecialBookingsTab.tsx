@@ -578,9 +578,25 @@ export default function SpecialBookingsTab() {
 
       {/* ===== Series Management Cards ===== */}
       <div>
-        <h2 className="font-display text-lg font-bold mb-1">Serien-Übersicht</h2>
-        <p className="text-sm text-muted-foreground italic mb-4">
-          Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div>
+            <h2 className="font-display text-lg font-bold mb-0.5">Serien-Übersicht</h2>
+            <p className="text-sm text-muted-foreground italic">
+              Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
+            </p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Serie suchen (Name, Platz...)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          {filteredGroups.length} Serie(n) gefunden{searchQuery.trim() ? ` für "${searchQuery}"` : ""} — Gesamt: {seriesGroups.length}
         </p>
 
         {seriesGroups.length === 0 ? (

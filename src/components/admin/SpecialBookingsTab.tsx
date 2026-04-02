@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";
@@ -90,6 +90,8 @@ export default function SpecialBookingsTab() {
 
   // Past series toggle
   const [showPast, setShowPast] = useState(false);
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { toast } = useToast();
 
@@ -97,18 +99,27 @@ export default function SpecialBookingsTab() {
   const einmaligTimeInvalid = mode === "einmalig" && parseInt(einmaligEndHour) <= parseInt(einmaligStartHour);
 
   const loadSeries = useCallback(async () => {
-    // Query ALL special bookings with recurrence_parent_id set
-    // Also include bookings that ARE parents (their own id might be a parent)
-    const { data } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("booking_type", "special")
-      .not("recurrence_parent_id", "is", null)
-      .order("date");
+    // Fetch ALL special bookings in pages of 1000 to bypass Supabase default limit
+    let allBookings: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("booking_type", "special")
+        .order("date")
+        .range(page * pageSize, (page + 1) * pageSize - 1);
 
-    const bookings = (data || []) as any[];
+      const rows = data || [];
+      allBookings = allBookings.concat(rows);
+      if (rows.length < pageSize) break;
+      page++;
+    }
+
     const groups: Record<string, any[]> = {};
-    for (const b of bookings) {
+    for (const b of allBookings) {
+      // Use recurrence_parent_id if set, otherwise use own id (orphan/standalone)
       const key = b.recurrence_parent_id || b.id;
       if (!groups[key]) groups[key] = [];
       groups[key].push(b);
@@ -127,7 +138,6 @@ export default function SpecialBookingsTab() {
       
       const minDate = bks.reduce((min: string, b: any) => (b.date < min ? b.date : min), bks[0].date);
       const maxDate = bks.reduce((max: string, b: any) => (b.date > max ? b.date : max), bks[0].date);
-      const maxHour = Math.max(...hours);
 
       // Series is past if ALL remaining bookings are in the past
       const allPast = bks.every((b: any) => {
@@ -466,9 +476,17 @@ export default function SpecialBookingsTab() {
     toast({ title: "Bearbeiten", description: "Serie-Parameter wurden in das Formular geladen." });
   };
 
-  // Separate active and past series
-  const activeGroups = seriesGroups.filter((sg) => !sg.isPast);
-  const pastGroups = seriesGroups.filter((sg) => sg.isPast);
+  // Filter by search query then separate active/past
+  const filteredGroups = searchQuery.trim()
+    ? seriesGroups.filter((sg) =>
+        sg.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sg.courts.some((c) => `platz ${c}`.includes(searchQuery.toLowerCase())) ||
+        sg.minDate.includes(searchQuery) ||
+        sg.maxDate.includes(searchQuery)
+      )
+    : seriesGroups;
+  const activeGroups = filteredGroups.filter((sg) => !sg.isPast);
+  const pastGroups = filteredGroups.filter((sg) => sg.isPast);
 
   return (
     <div className="space-y-6">
@@ -560,9 +578,25 @@ export default function SpecialBookingsTab() {
 
       {/* ===== Series Management Cards ===== */}
       <div>
-        <h2 className="font-display text-lg font-bold mb-1">Serien-Übersicht</h2>
-        <p className="text-sm text-muted-foreground italic mb-4">
-          Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div>
+            <h2 className="font-display text-lg font-bold mb-0.5">Serien-Übersicht</h2>
+            <p className="text-sm text-muted-foreground italic">
+              Um einzelne Termine einer Serie zu ändern, gehen Sie bitte auf die &apos;Buchungen&apos; Seite.
+            </p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Serie suchen (Name, Platz...)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          {filteredGroups.length} Serie(n) gefunden{searchQuery.trim() ? ` für "${searchQuery}"` : ""} — Gesamt: {seriesGroups.length}
         </p>
 
         {seriesGroups.length === 0 ? (

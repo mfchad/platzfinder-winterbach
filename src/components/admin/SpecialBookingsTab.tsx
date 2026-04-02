@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Trash2, Edit, AlertTriangle, RefreshCw, Key, Eye, EyeOff, Copy, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { de } from "date-fns/locale";
 import { format, addDays, isBefore, isEqual, getDay } from "date-fns";
 import { formatDateISO } from "@/lib/types";

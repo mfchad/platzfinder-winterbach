@@ -28,11 +28,15 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
   }, [bookings]);
 
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  // Use LOCAL date string (not UTC via toISOString) so the "today" comparison
+  // matches the user's clock — important on mobile around midnight.
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   function isPast(hour: number): boolean {
     if (date < todayStr) return true;
     if (date > todayStr) return false;
+    // Current hour is NOT past — keep it clickable so the 45-min grace period
+    // in booking-validation can allow booking the in-progress slot.
     return hour < now.getHours();
   }
 

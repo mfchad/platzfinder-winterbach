@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { User, Users, UserPlus, UserCheck } from "lucide-react";
 import type { Booking } from "@/lib/types";
 import { formatInitials } from "@/lib/types";
@@ -27,7 +27,24 @@ export default function BookingGrid({ date, bookings, startHour, endHour, courts
     return map;
   }, [bookings]);
 
-  const now = new Date();
+  // Tick every 30s so the grid re-evaluates "past" slots reliably on iOS Safari,
+  // which can freeze JS timers while the tab is backgrounded.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const refresh = () => setNow(new Date());
+    const id = window.setInterval(refresh, 30000);
+    const onVis = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+    };
+  }, []);
+
   // Use LOCAL date string (not UTC via toISOString) so the "today" comparison
   // matches the user's clock — important on mobile around midnight.
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

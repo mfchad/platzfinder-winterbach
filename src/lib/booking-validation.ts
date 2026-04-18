@@ -15,10 +15,17 @@ export async function verifyMember(vorname: string, nachname: string, geburtsjah
   return data === true;
 }
 
+// Build a local Date from "YYYY-MM-DD" + hour using numeric constructor.
+// String parsing of "YYYY-MM-DDTHH:MM:SS" is inconsistent on older mobile Safari
+// (sometimes treated as UTC), which broke the "current hour" grace period on mobile.
+function buildSlotDate(date: string, hour: number): Date {
+  const [y, m, d] = date.split('-').map(n => parseInt(n, 10));
+  return new Date(y, (m || 1) - 1, d || 1, hour, 0, 0, 0);
+}
+
 export function isWithinBookingWindow(date: string, hour: number, rules: Record<string, string>): boolean {
   const windowHours = getRuleNum(rules, 'booking_window_hours', 24);
-  // Build slot time as local time (matching Europe/Berlin context)
-  const slotTime = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
+  const slotTime = buildSlotDate(date, hour);
   const now = new Date();
   const diffMs = slotTime.getTime() - now.getTime();
   const diffMinutes = diffMs / (1000 * 60);
@@ -32,7 +39,7 @@ export function isWithinBookingWindow(date: string, hour: number, rules: Record<
 export function isHalfBookingAllowed(date: string, hour: number, rules: Record<string, string>): boolean {
   const minHours = getRuleNum(rules, 'half_booking_min_hours', 12);
   const maxHours = getRuleNum(rules, 'half_booking_max_hours', 24);
-  const slotTime = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
+  const slotTime = buildSlotDate(date, hour);
   const now = new Date();
   const diffMs = slotTime.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);

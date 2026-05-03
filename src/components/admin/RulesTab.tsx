@@ -176,7 +176,9 @@ export default function RulesTab() {
 
   // Check for half_booking_max_hours > booking_window_hours conflict
   const halfMaxHours = parseInt(getValue("half_booking_max_hours")) || 0;
-  const bookingWindowHours = parseInt(getValue("booking_window_hours")) || 0;
+  const singleWindow = parseInt(getValue("booking_window_hours_single")) || 0;
+  const doubleWindow = parseInt(getValue("booking_window_hours_double")) || 0;
+  const bookingWindowHours = Math.max(singleWindow, doubleWindow);
   const showHalfBookingHint = halfMaxHours > bookingWindowHours && bookingWindowHours > 0;
 
   return (

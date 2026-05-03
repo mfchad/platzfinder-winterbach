@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { verifyMember, isWithinBookingWindow, isHalfBookingAllowed, isCoreTime, checkCoreTimeLimits } from "@/lib/booking-validation";
+import { verifyMember, isWithinBookingWindow, isHalfBookingAllowed, isCoreTime, checkCoreTimeLimits, getBookingWindowHours } from "@/lib/booking-validation";
 import { useToast } from "@/hooks/use-toast";
 import TurnstileWidget from "@/components/TurnstileWidget";
 

@@ -175,7 +175,16 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
           <p className="text-sm text-destructive">
             {bookingType === 'half'
               ? "Halbbuchungen sind in diesem Zeitfenster nicht möglich."
-              : "Buchungen sind nur innerhalb des Buchungsvorlaufs möglich."}
+              : bookingType === 'full' && singleBlockedDoubleAllowed
+                ? `Einzelbuchungen sind erst ${singleWindowH} Stunden im Voraus möglich. Doppelbuchungen sind bereits jetzt möglich!`
+                : bookingType === 'double'
+                  ? `Doppelbuchungen sind nur innerhalb von ${doubleWindowH} Stunden im Voraus möglich.`
+                  : `Einzelbuchungen sind nur innerhalb von ${singleWindowH} Stunden im Voraus möglich.`}
+          </p>
+        )}
+        {isSlotBookable && bookingType === 'double' && doublePriority && singleBlockedDoubleAllowed && (
+          <p className="text-sm text-emerald-600 dark:text-emerald-400">
+            Doppel-Priorität aktiv: Einzel ist erst in {Math.max(0, Math.ceil(singleWindowH - (doubleWindowH - 1)))} h frei buchbar.
           </p>
         )}
 

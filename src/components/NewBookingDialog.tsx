@@ -182,11 +182,6 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
                   : `Einzelbuchungen sind nur innerhalb von ${singleWindowH} Stunden im Voraus möglich.`}
           </p>
         )}
-        {isSlotBookable && bookingType === 'double' && doublePriority && singleBlockedDoubleAllowed && (
-          <p className="text-sm text-emerald-600 dark:text-emerald-400">
-            Doppel-Priorität aktiv: Einzel ist erst in {Math.max(0, Math.ceil(singleWindowH - (doubleWindowH - 1)))} h frei buchbar.
-          </p>
-        )}
 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">

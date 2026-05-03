@@ -26,7 +26,8 @@ const RULE_META: RuleMeta[] = [
   // Platz-Einstellungen
   { key: "courts_count", label: "Anzahl der Plätze", hint: "Wie viele Tennisplätze stehen zur Verfügung?", group: "Platz-Einstellungen", type: "number" },
   // Buchungs-Fenster
-  { key: "booking_window_hours", label: "Buchungsvorlauf (Stunden)", hint: "Wie viele Stunden im Voraus darf ein Mitglied einen Platz buchen?", group: "Buchungs-Fenster", type: "number" },
+  { key: "booking_window_hours_single", label: "Buchungsvorlauf Einzel (Stunden)", hint: "Wie viele Stunden im Voraus darf ein Mitglied einen Einzel-Platz buchen? (Standard: 24)", group: "Buchungs-Fenster", type: "number" },
+  { key: "booking_window_hours_double", label: "Buchungsvorlauf Doppel (Stunden)", hint: "Wie viele Stunden im Voraus darf ein Mitglied einen Doppel-Platz buchen? Höher als Einzel setzen, um Doppel-Buchungen Priorität zu geben (Standard: 25).", group: "Buchungs-Fenster", type: "number" },
   // Kernzeit-Regeln
   { key: "core_time_start", label: "Kernzeit Beginn (Stunde)", hint: "Ab welcher Uhrzeit gelten die strengeren Kernzeit-Limits?", group: "Kernzeit-Regeln", type: "number" },
   { key: "core_time_end", label: "Kernzeit Ende (Stunde)", hint: "Bis zu welcher Uhrzeit gelten die strengeren Kernzeit-Limits?", group: "Kernzeit-Regeln", type: "number" },

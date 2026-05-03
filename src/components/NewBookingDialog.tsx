@@ -38,12 +38,19 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
 
   const halfAllowed = isHalfBookingAllowed(date, hour, rules);
-  const withinWindow = isWithinBookingWindow(date, hour, rules);
+  const singleWithinWindow = isWithinBookingWindow(date, hour, rules, 'full');
+  const doubleWithinWindow = isWithinBookingWindow(date, hour, rules, 'double');
+  const withinWindow = bookingType === 'double' ? doubleWithinWindow : singleWithinWindow;
   const coreTime = isCoreTime(date, hour, rules);
+  const singleWindowH = getBookingWindowHours(rules, 'full');
+  const doubleWindowH = getBookingWindowHours(rules, 'double');
+  const doublePriority = doubleWindowH > singleWindowH;
 
   // Determine if the slot is bookable based on the selected type:
-  // Half-bookings bypass the global booking window and use their own time window.
   const isSlotBookable = bookingType === 'half' ? halfAllowed : withinWindow;
+
+  // Edge case: Einzel not yet bookable, but Doppel is (priority window)
+  const singleBlockedDoubleAllowed = !singleWithinWindow && doubleWithinWindow;
 
   const handleSubmit = async () => {
     if (!vorname.trim() || !nachname.trim() || !geburtsjahr.trim()) {

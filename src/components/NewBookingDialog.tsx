@@ -83,7 +83,12 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
         }
       } else {
         if (!withinWindow) {
-          toast({ title: "Fehler", description: "Buchungen sind nur innerhalb des Buchungsvorlaufs möglich.", variant: "destructive" });
+          const msg = bookingType === 'full' && singleBlockedDoubleAllowed
+            ? `Einzelbuchungen sind erst ${singleWindowH} Stunden im Voraus möglich. Doppelbuchungen sind bereits jetzt möglich!`
+            : bookingType === 'double'
+              ? `Doppelbuchungen sind nur innerhalb von ${doubleWindowH} Stunden im Voraus möglich.`
+              : `Einzelbuchungen sind nur innerhalb von ${singleWindowH} Stunden im Voraus möglich.`;
+          toast({ title: "Fehler", description: msg, variant: "destructive" });
           setLoading(false);
           return;
         }

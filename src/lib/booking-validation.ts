@@ -23,8 +23,18 @@ function buildSlotDate(date: string, hour: number): Date {
   return new Date(y, (m || 1) - 1, d || 1, hour, 0, 0, 0);
 }
 
-export function isWithinBookingWindow(date: string, hour: number, rules: Record<string, string>): boolean {
-  const windowHours = getRuleNum(rules, 'booking_window_hours', 24);
+export type WindowBookingType = 'full' | 'double' | 'half' | 'special';
+
+export function getBookingWindowHours(rules: Record<string, string>, bookingType: WindowBookingType): number {
+  const fallback = getRuleNum(rules, 'booking_window_hours', 24);
+  if (bookingType === 'double') {
+    return getRuleNum(rules, 'booking_window_hours_double', Math.max(fallback, 25));
+  }
+  return getRuleNum(rules, 'booking_window_hours_single', fallback);
+}
+
+export function isWithinBookingWindow(date: string, hour: number, rules: Record<string, string>, bookingType: WindowBookingType = 'full'): boolean {
+  const windowHours = getBookingWindowHours(rules, bookingType);
   const slotTime = buildSlotDate(date, hour);
   const now = new Date();
   const diffMs = slotTime.getTime() - now.getTime();

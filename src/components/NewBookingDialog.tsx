@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { verifyMember, isWithinBookingWindow, isHalfBookingAllowed, isCoreTime, checkCoreTimeLimits } from "@/lib/booking-validation";
+import { verifyMember, isWithinBookingWindow, isHalfBookingAllowed, isCoreTime, checkCoreTimeLimits, getBookingWindowHours } from "@/lib/booking-validation";
 import { useToast } from "@/hooks/use-toast";
 import TurnstileWidget from "@/components/TurnstileWidget";
 
@@ -38,12 +38,19 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
 
   const halfAllowed = isHalfBookingAllowed(date, hour, rules);
-  const withinWindow = isWithinBookingWindow(date, hour, rules);
+  const singleWithinWindow = isWithinBookingWindow(date, hour, rules, 'full');
+  const doubleWithinWindow = isWithinBookingWindow(date, hour, rules, 'double');
+  const withinWindow = bookingType === 'double' ? doubleWithinWindow : singleWithinWindow;
   const coreTime = isCoreTime(date, hour, rules);
+  const singleWindowH = getBookingWindowHours(rules, 'full');
+  const doubleWindowH = getBookingWindowHours(rules, 'double');
+  const doublePriority = doubleWindowH > singleWindowH;
 
   // Determine if the slot is bookable based on the selected type:
-  // Half-bookings bypass the global booking window and use their own time window.
   const isSlotBookable = bookingType === 'half' ? halfAllowed : withinWindow;
+
+  // Edge case: Einzel not yet bookable, but Doppel is (priority window)
+  const singleBlockedDoubleAllowed = !singleWithinWindow && doubleWithinWindow;
 
   const handleSubmit = async () => {
     if (!vorname.trim() || !nachname.trim() || !geburtsjahr.trim()) {
@@ -76,7 +83,12 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
         }
       } else {
         if (!withinWindow) {
-          toast({ title: "Fehler", description: "Buchungen sind nur innerhalb des Buchungsvorlaufs möglich.", variant: "destructive" });
+          const msg = bookingType === 'full' && singleBlockedDoubleAllowed
+            ? `Einzelbuchungen sind erst ${singleWindowH} Stunden im Voraus möglich. Doppelbuchungen sind bereits jetzt möglich!`
+            : bookingType === 'double'
+              ? `Doppelbuchungen sind nur innerhalb von ${doubleWindowH} Stunden im Voraus möglich.`
+              : `Einzelbuchungen sind nur innerhalb von ${singleWindowH} Stunden im Voraus möglich.`;
+          toast({ title: "Fehler", description: msg, variant: "destructive" });
           setLoading(false);
           return;
         }
@@ -168,7 +180,11 @@ export default function NewBookingDialog({ open, onClose, court, hour, date, rul
           <p className="text-sm text-destructive">
             {bookingType === 'half'
               ? "Halbbuchungen sind in diesem Zeitfenster nicht möglich."
-              : "Buchungen sind nur innerhalb des Buchungsvorlaufs möglich."}
+              : bookingType === 'full' && singleBlockedDoubleAllowed
+                ? `Einzelbuchungen sind erst ${singleWindowH} Stunden im Voraus möglich. Doppelbuchungen sind bereits jetzt möglich!`
+                : bookingType === 'double'
+                  ? `Doppelbuchungen sind nur innerhalb von ${doubleWindowH} Stunden im Voraus möglich.`
+                  : `Einzelbuchungen sind nur innerhalb von ${singleWindowH} Stunden im Voraus möglich.`}
           </p>
         )}
 

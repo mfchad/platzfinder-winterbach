@@ -37,14 +37,25 @@ export default function AdminBookingsTab() {
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("bookings")
-      .select("*")
-      .gte("date", startStr)
-      .lte("date", endStr)
-      .order("date")
-      .order("start_hour");
-    setBookings((data as Booking[]) || []);
+    const pageSize = 1000;
+    let from = 0;
+    const all: Booking[] = [];
+    // Paginate to bypass Supabase's default 1000-row limit (year view can exceed it).
+    while (true) {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*")
+        .gte("date", startStr)
+        .lte("date", endStr)
+        .order("date")
+        .order("start_hour")
+        .range(from, from + pageSize - 1);
+      if (error || !data) break;
+      all.push(...(data as Booking[]));
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    setBookings(all);
     setLoading(false);
   }, [startStr, endStr]);
 

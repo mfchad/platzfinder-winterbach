@@ -1,72 +1,39 @@
+## Self-Service E-Mail-Erfassung für Mitglieder
 
+Aktuell: 13 von 470 Mitgliedern haben eine E-Mail hinterlegt.
 
-# Restrict Admin Login to Authorized Users Only
+### 1. Datenbank
+- **Neue Tabelle** `email_verification_requests`: speichert Token, Mitglied, vorgeschlagene E-Mail, Ablaufzeit, Status. RLS: nur Edge Functions schreiben/lesen.
+- **Public RPC** `get_email_completion_stats()` → `{ filled, total }` (keine PII, für Banner).
+- **Public RPC** `lookup_member_email(vorname, nachname)` → `{ found, has_email, masked_email }` (keine Roh-E-Mail an Public).
+- **Edge Function** `request-member-email`: prüft Mitglied (Vor- + Nachname), erzeugt Token, speichert Eintrag, **sendet Verifizierungs-Mail**.
+- **Edge Function** `verify-member-email`: validiert Token, schreibt E-Mail in `members`.
 
-## What Changes
+### 2. UI auf der Buchungsseite
+- **Banner** (subtile Akzentfarbe, Club-Gold/Marine, Schließen-Knopf merkt sich Status in localStorage) oberhalb der DateNavigation:
+  *"Hilf uns, den Club zu digitalisieren! {filled} / {total} E-Mail-Adressen erfasst."*
+  + Button **„E-Mail jetzt ergänzen"**.
+- Live-Update via Supabase Realtime auf `members`.
 
-Right now, anyone with a Google account can log in and see the admin dashboard (even though they can't access data due to database security). We'll fix this so that unauthorized users are immediately signed out with a clear error message.
+### 3. Modal-Workflow (`MemberEmailDialog`)
+- **Schritt 1**: Vorname + Nachname.
+- **Schritt 2**: Lookup → 
+  - nicht gefunden: Hinweis "Mitglied nicht gefunden, bitte Verwaltung kontaktieren".
+  - gefunden, mit E-Mail: maskierte E-Mail anzeigen + Button „Aktualisieren".
+  - gefunden, ohne E-Mail: Eingabefeld.
+- **Schritt 3**: E-Mail eingeben → Edge Function ruft Verifizierungslink → Bestätigung „Wir haben dir einen Bestätigungslink gesendet."
+- **Verifizierungs-Seite** `/verify-email?token=…`: ruft Edge Function, zeigt Erfolg/Fehler.
 
-## How It Works
+### 4. Admin
+- `MembersTab` zeigt aktualisierte E-Mails (bereits live, da Tabelle direkt gelesen wird).
 
-1. **Automatic role assignment**: When one of the authorized emails logs in for the first time, the system automatically grants them admin access via a database trigger.
+### Offene Voraussetzung — E-Mail-Versand
+Damit Verifizierungslinks **wirklich verschickt** werden, braucht das Projekt eine eigene Mail-Domain (z. B. `notify.tc-winterbach.de`). Aktuell ist **keine Domain konfiguriert**. Zwei Optionen:
 
-2. **Post-login check**: After Google login, the app checks whether the user has admin privileges. If not, they are immediately signed out and shown an error message ("Kein Zugriff -- Ihr Konto ist nicht als Administrator registriert.").
+**A. Domain einrichten** *(empfohlen, professionell, branded mails von z.B. `noreply@notify.tc-winterbach.de`)*  
+Ich richte Domain + transaktionalen Versand ein, baue dann das vollständige Verifizierungs-Feature inkl. Mailversand.
 
-3. **Authorized emails**: tinaschwan86@gmail.com, dieterschwan111@gmail.com, weltera.wnd@gmail.com, and the existing mfchad@gmail.com.
+**B. Vorerst ohne Verifizierung** *(schnell, aber weniger sicher)*  
+Eingabe wird sofort gespeichert und als „unbestätigt" markiert. Kein Mailversand. Verifizierung kann später nachgerüstet werden.
 
-## Technical Details
-
-### 1. Database: Auto-assign admin role trigger (migration)
-
-Create a trigger function on `auth.users` that fires after a new user is created. If the email matches the whitelist, it inserts a row into `user_roles` with role `admin`.
-
-```sql
-CREATE OR REPLACE FUNCTION public.auto_assign_admin_role()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NEW.email IN (
-    'mfchad@gmail.com',
-    'tinaschwan86@gmail.com',
-    'dieterschwan111@gmail.com',
-    'welter.wnd@gmail.com'
-  ) THEN
-    INSERT INTO public.user_roles (user_id, role)
-    VALUES (NEW.id, 'admin')
-    ON CONFLICT (user_id, role) DO NOTHING;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_auto_assign_admin
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION public.auto_assign_admin_role();
-```
-
-### 2. `src/pages/AdminLogin.tsx` -- add post-login role check
-
-After `onAuthStateChange` detects a `SIGNED_IN` event:
-- Query `user_roles` to check if user has admin role
-- If not admin, call `supabase.auth.signOut()` and show a toast error
-- If admin, navigate to `/admin/dashboard`
-
-### 3. `src/pages/AdminDashboard.tsx` -- add role guard
-
-On mount, after confirming session exists:
-- Query `user_roles` for the current user
-- If no admin role found, sign out and redirect to `/admin` with an error
-
-### 4. `src/App.tsx` -- update `AuthRedirectHandler`
-
-Update the redirect handler to also verify admin role before redirecting to `/admin/dashboard`, preventing a flash of the dashboard for unauthorized users.
-
-## What the User Sees
-
-- **Authorized user**: Logs in with Google, lands on the admin dashboard as before.
-- **Unauthorized user**: Logs in with Google, sees a brief loading state, then gets signed out with a German-language error message: "Kein Zugriff -- Ihr Konto ist nicht als Administrator registriert."
-
+Bitte wähle A oder B, damit ich entsprechend implementiere.

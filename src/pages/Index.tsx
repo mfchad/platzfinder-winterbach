@@ -13,7 +13,7 @@ import { fetchRules, getRuleNum, clearRulesCache } from "@/lib/booking-rules";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
 import clubBadge from "@/assets/Wappen_TCW.png";
-import EmailCompletionBanner from "@/components/EmailCompletionBanner";
+
 
 export default function Index() {
   const navigate = useNavigate();

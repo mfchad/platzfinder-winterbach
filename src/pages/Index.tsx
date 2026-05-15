@@ -13,6 +13,7 @@ import { fetchRules, getRuleNum, clearRulesCache } from "@/lib/booking-rules";
 import type { Booking } from "@/lib/types";
 import { formatDateISO } from "@/lib/types";
 import clubBadge from "@/assets/Wappen_TCW.png";
+import EmailCompletionBanner from "@/components/EmailCompletionBanner";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -110,8 +111,9 @@ export default function Index() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-3 space-y-3">
+        <EmailCompletionBanner />
         <DateNavigation date={date} onDateChange={setDate} />
-        
+
         <BookingGrid
           date={dateStr}
           bookings={bookings}

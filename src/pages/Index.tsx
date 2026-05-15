@@ -111,7 +111,7 @@ export default function Index() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-3 space-y-3">
-        <EmailCompletionBanner />
+        
         <DateNavigation date={date} onDateChange={setDate} />
 
         <BookingGrid

@@ -57,7 +57,7 @@ export default function MemberEmailDialog({ open, onClose, onSuccess }: Props) {
       toast({ title: "Fehler", description: error.message, variant: "destructive" });
       return;
     }
-    const result = data as LookupResult;
+    const result = data as unknown as LookupResult;
     setLookup(result);
     if (!result.found) {
       toast({

@@ -137,10 +137,52 @@ export type Database = {
           },
         ]
       }
+      email_verification_requests: {
+        Row: {
+          created_at: string
+          created_by_ip: string | null
+          expires_at: string
+          id: string
+          member_id: string
+          proposed_email: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_ip?: string | null
+          expires_at?: string
+          id?: string
+          member_id: string
+          proposed_email: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_ip?: string | null
+          expires_at?: string
+          id?: string
+          member_id?: string
+          proposed_email?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_verification_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           created_at: string
           email: string | null
+          email_verified_at: string | null
           geburtsjahr: number
           id: string
           nachname: string
@@ -149,6 +191,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email?: string | null
+          email_verified_at?: string | null
           geburtsjahr: number
           id?: string
           nachname: string
@@ -157,6 +200,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string | null
+          email_verified_at?: string | null
           geburtsjahr?: number
           id?: string
           nachname?: string
@@ -276,12 +320,23 @@ export type Database = {
       }
     }
     Functions: {
+      get_email_completion_stats: {
+        Args: never
+        Returns: {
+          filled: number
+          total: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      lookup_member_for_email: {
+        Args: { _nachname: string; _vorname: string }
+        Returns: Json
       }
       verify_member: {
         Args: { _geburtsjahr: number; _nachname: string; _vorname: string }

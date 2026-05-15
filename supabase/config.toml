@@ -20,3 +20,10 @@ verify_jwt = false
 
 [functions.cancel-trainer-booking]
 verify_jwt = false
+
+[functions.request-member-email]
+verify_jwt = false
+
+[functions.verify-member-email]
+verify_jwt = false
+
